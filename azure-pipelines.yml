@@ -38,7 +38,10 @@ stages:
       displayName: 'Use Python $(pythonVersion)'
 
     - script: |
+        python -m venv antenv
+        source antenv/bin/activate
         python -m pip install --upgrade pip
+        pip install setup
         pip install -r requirements.txt
       workingDirectory: $(projectRoot)
       displayName: "Install requirements"
@@ -51,9 +54,8 @@ stages:
         archiveType: zip
         archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
         replaceExistingArchive: true
-        verbose: true
 
-    - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       displayName: 'Upload package'
       artifact: drop
 
@@ -77,7 +79,7 @@ stages:
             displayName: 'Use Python version'
 
           - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App : $(webAppName)'
+            displayName: 'Deploy Azure Web App : stem-bhase-graduates'
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               appName: $(webAppName)
