@@ -8,9 +8,4 @@ app = Dash(__name__, server=flask_server, external_stylesheets=[dbc.themes.BOOTS
 
 app.layout = [html.Div(children='Hello World')]
 
-# main driver function
-if __name__ == '__main__':
-
-    # run() method of Flask class runs the application 
-    # on the local development server.
-    app.run()
+server = app.server
