@@ -1,11 +1,10 @@
 from dash import Dash, html
-from flask import Flask
 import dash_bootstrap_components as dbc
 
-flask_server = Flask(__name__)
-
-app = Dash(__name__, server=flask_server, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 
 app.layout = [html.Div(children='Hello World')]
 
-server = app.server
+if __name__ == '__main__':
+    app.run_server(debug=False)
