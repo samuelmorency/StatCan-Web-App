@@ -5,3 +5,9 @@ geopandas
 dash_leaflet
 colorlover
 dash_extensions
+plotly
+functools
+time
+numpy
+typing
+datetime
