@@ -149,5 +149,4 @@ cython_debug/
 config.py
 
 # data
-data.xlsx
-df_create.py
+/hidden
