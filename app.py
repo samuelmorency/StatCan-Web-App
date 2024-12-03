@@ -12,8 +12,6 @@ from dash.exceptions import PreventUpdate
 import time
 import numpy as np
 from functools import lru_cache
-from typing import Tuple, Dict, List
-from datetime import datetime
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
