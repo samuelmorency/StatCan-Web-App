@@ -140,3 +140,10 @@ cython_debug/
 
 # VS Code settings
 .vscode/
+
+# Unfinished modular structure
+/callbacks
+/components
+/data
+/utils
+config.py
