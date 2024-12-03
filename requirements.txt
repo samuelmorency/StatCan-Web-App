@@ -1,9 +1,9 @@
 dash==2.18.2
 dash-bootstrap-components==1.6.0
-pandas
-geopandas
-dash_leaflet
-colorlover
-dash_extensions
-plotly
-numpy
+pandas==2.2.3
+geopandas==1.0.1
+dash-leaflet==1.0.15
+colorlover==0.3.0
+dash-extensions==1.0.19
+plotly==5.24.1
+numpy==2.1.3
