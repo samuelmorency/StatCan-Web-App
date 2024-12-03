@@ -151,30 +151,9 @@ def load_spatial_data():
 
 @functools.lru_cache(maxsize=1)
 def load_and_process_educational_data():
-    data = pd.read_excel("data.xlsx", sheet_name="CMAGrads", dtype={'DGUID': str})
+    data = pd.read_pickle("cleaned_data.pkl")
     
-    id_columns = [
-        "STEM/BHASE", "Province_Territory", "CMA_CA", "Institution",
-        "ISCED_level_of_education", "Credential_Type", "CIP6_Code",
-        "CIP_Name", "DGUID"
-    ]
-    
-    melted_data = data.melt(
-        id_vars=id_columns,
-        value_vars=["2019_2020", "2020_2021", "2021_2022"],
-        var_name="year",
-        value_name="value"
-    )
-    
-    cleaned_data = (melted_data
-        .dropna(subset=['value'])
-        .astype({'value': 'int32'})
-        .groupby(id_columns + ['year'])
-        .agg(value=('value', 'sum'))
-        .reset_index()
-    )
-    
-    return cleaned_data
+    return data
 
 # Load initial data
 province_sf, cma_sf, csd_sf = load_spatial_data()

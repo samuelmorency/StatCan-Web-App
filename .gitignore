@@ -147,3 +147,7 @@ cython_debug/
 /data
 /utils
 config.py
+
+# data
+data.xlsx
+df_create.py
