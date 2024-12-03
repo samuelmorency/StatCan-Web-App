@@ -7,3 +7,4 @@ colorlover
 dash_extensions
 plotly
 numpy
+openpyxl
