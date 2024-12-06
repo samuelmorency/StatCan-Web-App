@@ -200,9 +200,9 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     
     return filtered_data, aggregations['cma'], aggregations['isced'], aggregations['province']
 
-def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_cma):
+def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
     graduates = row['graduates']
-    cmapuid = str(row['DGUID'])
+    dguid = str(row['DGUID'])
     
     # Optimize color calculation
     if max_graduates > min_graduates:
@@ -212,11 +212,11 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     else:
         color = colorscale[0] if graduates > 0 else 'lightgray'
     
-    is_selected = selected_cma and cmapuid == selected_cma
+    is_selected = selected_feature and dguid == selected_feature
     
     return {
         'graduates': int(graduates),
-        'DGUID': cmapuid,
+        'DGUID': dguid,
         'CMA_CA': row['NAME'],
         'style': {
             'fillColor': 'yellow' if is_selected else color,
@@ -528,11 +528,11 @@ app.layout = dbc.Container([
     ])
 ], fluid=True)
 
-def calculate_viewport_update(triggered_id, cma_data, selected_cma=None):
+def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """Helper function to determine viewport updates"""
-    if triggered_id == 'selected-cma' and selected_cma:
+    if triggered_id == 'selected-cma' and selected_feature:
         # For clicked features, zoom to the selected feature
-        selected_geometry = cma_data[cma_data['DGUID'] == selected_cma]
+        selected_geometry = cma_data[cma_data['DGUID'] == selected_feature]
         if not selected_geometry.empty:
             bounds = selected_geometry.total_bounds
             viewport = calculate_optimal_viewport(tuple(bounds))
@@ -556,7 +556,7 @@ def calculate_viewport_update(triggered_id, cma_data, selected_cma=None):
     State('selected-cma', 'data'),
     prevent_initial_call=True
 )
-def update_selected_cma(click_data, n_clicks, stored_cma):
+def update_selected_feature(click_data, n_clicks, stored_cma):
     ctx_manager = CallbackContextManager(callback_context)
     
     if not ctx_manager.is_triggered:
@@ -619,7 +619,7 @@ def update_selected_province(clickData, n_clicks, stored_province, figure):
         
     return stored_province
 
-def update_map_style(geojson_data, colorscale, selected_cma=None):
+def update_map_style(geojson_data, colorscale, selected_feature=None):
     """Create a Patch object for updating map styles"""
     patched_geojson = Patch()
     
@@ -627,8 +627,8 @@ def update_map_style(geojson_data, colorscale, selected_cma=None):
         return patched_geojson
         
     for i, feature in enumerate(geojson_data['features']):
-        cmapuid = feature['properties']['DGUID']
-        is_selected = selected_cma and cmapuid == selected_cma
+        dguid = feature['properties']['DGUID']
+        is_selected = selected_feature and dguid == selected_feature
         
         # Update only style properties that need to change
         style_updates = {
@@ -712,7 +712,7 @@ def update_visualizations(*args):
         current_viewport = args[-1]  # Get the current viewport state
         (stem_bhase, years, provs, isced, credentials, institutions, 
          chart_type_isced, chart_type_province, selected_isced, 
-         selected_province, selected_cma) = args[:-1]  # Get other inputs
+         selected_province, selected_feature) = args[:-1]  # Get other inputs
         
         ctx = callback_context
         if not ctx.triggered:
@@ -731,15 +731,15 @@ def update_visualizations(*args):
         )
         
         # Apply cross-filtering with vectorized operations
-        if any([selected_isced, selected_province, selected_cma]):
+        if any([selected_isced, selected_province, selected_feature]):
             filter_conditions = pd.Series(True, index=filtered_data.index)
             
             if selected_isced:
                 filter_conditions &= filtered_data['ISCED_level_of_education'] == selected_isced
             if selected_province:
                 filter_conditions &= filtered_data['Province_Territory'] == selected_province
-            if selected_cma:
-                filter_conditions &= filtered_data['DGUID'] == selected_cma
+            if selected_feature:
+                filter_conditions &= filtered_data['DGUID'] == selected_feature
                 
             filtered_data = filtered_data[filter_conditions]
             
@@ -789,7 +789,7 @@ def update_visualizations(*args):
                 'type': 'Feature',
                 'geometry': row.geometry.__geo_interface__,
                 'properties': create_geojson_feature(
-                    row, colorscale, max_graduates, min_graduates, selected_cma
+                    row, colorscale, max_graduates, min_graduates, selected_feature
                 )
             }
             for _, row in cma_data.iterrows()

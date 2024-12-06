@@ -151,6 +151,7 @@ config.py
 # data
 /hidden
 data_wrangle.ipynb
+app2.py
 
 # Assets
 /assets
