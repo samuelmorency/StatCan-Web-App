@@ -150,3 +150,7 @@ config.py
 
 # data
 /hidden
+data_wrangle.ipynb
+
+# Assets
+/assets
