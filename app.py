@@ -12,10 +12,14 @@ from dash.exceptions import PreventUpdate
 import time
 import numpy as np
 from functools import lru_cache
+from diskcache import Cache
+
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
+
+cache = Cache('/tmp/dash_cache')
 
 class MapState:
     def __init__(self):
@@ -140,14 +144,10 @@ class CallbackContextManager:
 # Load spatial data
 @functools.lru_cache(maxsize=1)
 def load_spatial_data():
-    province_sf = gpd.read_file("lcsd000b21a_e.shp")
-    cma_sf = gpd.read_file("lcma000b21a_e.shp")
-    csd_sf = gpd.read_file("lcsd000b21a_e.shp")
-    
-    to_convert = [province_sf, cma_sf, csd_sf]
-    converted = [df.to_crs(epsg=4326) for df in to_convert]
-    
-    return converted[0], converted[1], converted[2]
+    province_longlat_clean = gpd.read_parquet("province_longlat_clean.parquet")
+    combined_longlat_clean = gpd.read_parquet("combined_longlat_clean.parquet")
+
+    return province_longlat_clean, combined_longlat_clean
 
 @functools.lru_cache(maxsize=1)
 def load_and_process_educational_data():
@@ -156,27 +156,8 @@ def load_and_process_educational_data():
     return data
 
 # Load initial data
-province_sf, cma_sf, csd_sf = load_spatial_data()
+province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
-
-# Process spatial data
-cma_longlat = cma_sf.to_crs(epsg=4326)
-csd_longlat = csd_sf.to_crs(epsg=4326)
-
-# Optimize data cleaning with chained operations
-cma_longlat_clean = (cma_longlat
-    .rename(columns={'CMATYPE': 'TYPE', 'CMANAME': 'NAME'})
-    .drop(columns=['DGUIDP', 'CMAUID', 'CMAPUID'])
-    .assign(CLASS="CMA_CA")
-)
-
-csd_longlat_clean = (csd_longlat
-    .rename(columns={'CSDTYPE': 'TYPE', 'CSDNAME': 'NAME'})
-    .drop(columns=['CSDUID'])
-    .assign(CLASS="CSD")
-)
-
-combined_longlat_clean = pd.concat([cma_longlat_clean, csd_longlat_clean], ignore_index=True)
 
 def filter_data(data, filters):
     """Efficiently filter data using vectorized operations"""
