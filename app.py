@@ -723,6 +723,7 @@ app.layout = dbc.Container([
                                 return feature.properties.style;
                             }
                             """),
+                            zoomToBounds=True,
                             hoverStyle=dict(
                                 weight=2, color='black', dashArray='',
                                 fillOpacity=0.7
