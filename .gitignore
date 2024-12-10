@@ -142,16 +142,14 @@ cython_debug/
 .vscode/
 
 # Unfinished modular structure
-/callbacks
-/components
-/data
-/utils
-config.py
+
+assets/dashExtensions_default.js
 
 # data
 /hidden
-data_wrangle.ipynb
-app2.py
-
-# Assets
 /assets
+app2.py
+app_working.py
+app_working_backup.py
+data_wrangle.ipynb
+config.py

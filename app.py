@@ -14,7 +14,6 @@ import numpy as np
 from functools import lru_cache
 from diskcache import Cache
 
-
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
@@ -22,7 +21,20 @@ server = app.server
 cache = Cache('/tmp/dash_cache')
 
 class MapState:
+    """
+    Maintains the current state of the map, including viewport bounds, zoom level,
+    selected and hovered features, color scale, timing of last updates, and whether
+    the viewport is locked from updates. This class provides methods to determine
+    if the viewport should be updated based on timing constraints and user actions,
+    as well as methods to update the stored state as user interactions occur.
+    """
     def __init__(self):
+        """
+        Initializes a new MapState instance with all state variables set to None or
+        their default values. The initial state does not have any current bounds,
+        zoom level, selected feature, or hover feature. The viewport lock is initially
+        false and the last update time is zero.
+        """
         self.current_bounds = None
         self.current_zoom = None
         self.selected_feature = None
@@ -32,6 +44,24 @@ class MapState:
         self.viewport_locked = False
         
     def should_update_viewport(self, new_bounds, force=False):
+        """
+        Determines whether the map viewport should be updated based on the current
+        state, timing since last update, and whether a forced update is requested.
+        If the viewport is locked and a forced update is not requested, the update
+        will be prevented. If sufficient time has elapsed since the last update, the
+        viewport lock is reset to allow changes.
+
+        Args:
+            new_bounds (list): A bounding box in the format [[min_lat, min_lon],
+                               [max_lat, max_lon]] representing the new candidate
+                               viewport bounds.
+            force (bool): If True, overrides locking and forces an update regardless
+                          of the elapsed time. If False, normal timing and lock
+                          considerations apply.
+
+        Returns:
+            bool: True if the viewport should be updated, False otherwise.
+        """
         if not self.current_bounds or force:
             return True
             
@@ -46,6 +76,19 @@ class MapState:
         return True
         
     def update_state(self, bounds=None, zoom=None, selected=None, hover=None, color_scale=None):
+        """
+        Updates the internal state of the map. Any parameter that is not None will
+        update the corresponding attribute. Updating the bounds also updates the
+        last update time to the current timestamp.
+
+        Args:
+            bounds (list or None): New viewport bounds as [[min_lat, min_lon],
+                                  [max_lat, max_lon]] or None to leave unchanged.
+            zoom (int or None): New zoom level or None to leave unchanged.
+            selected (str or None): New selected feature identifier or None to leave unchanged.
+            hover (str or None): New hovered feature identifier or None to leave unchanged.
+            color_scale (list or None): New color scale list or None to leave unchanged.
+        """
         if bounds is not None:
             self.current_bounds = bounds
             self.last_update_time = time.time()
@@ -61,18 +104,26 @@ class MapState:
 # Initialize map state
 map_state = MapState()
 
-# Add optimized helper functions
 @lru_cache(maxsize=32)
 def calculate_optimal_viewport(bounds, padding_factor=0.1):
     """
-    Calculate optimal viewport settings for given bounds.
-    
+    Computes an optimal viewport given geographic bounds. If the provided bounds
+    are too small, they are adjusted to ensure a minimum viewing area. The function
+    returns a dictionary including padded bounds, a calculated center point, and a
+    suitable zoom level. If an error occurs, it returns default viewport parameters
+    centered over Canada.
+
     Args:
-        bounds (tuple): (min_lat, min_lon, max_lat, max_lon)
-        padding_factor (float): Padding factor for bounds
-        
+        bounds (tuple): A tuple (min_lat, min_lon, max_lat, max_lon) specifying
+                        the geographic area to fit in the viewport.
+        padding_factor (float): A factor to apply as padding around the given bounds
+                                to avoid overly tight fitting.
+
     Returns:
-        dict: Viewport settings including bounds, center, and zoom
+        dict: A dictionary containing:
+              - 'bounds': A 2D list of adjusted bounding coordinates.
+              - 'center': A 2-element list representing the center [lat, lon].
+              - 'zoom': An integer representing the computed zoom level.
     """
     try:
         min_lat, min_lon, max_lat, max_lon = bounds
@@ -108,6 +159,21 @@ def calculate_optimal_viewport(bounds, padding_factor=0.1):
         }
 
 def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
+    """
+    Determines a suitable zoom level based on the size of a geographic bounding box.
+    The zoom level is higher (more zoomed in) for smaller areas and lower (more zoomed out)
+    for larger areas. The logic considers the maximum dimension of the latitude or
+    longitude span and maps it to a discrete zoom level.
+
+    Args:
+        min_lat (float): Minimum latitude of the bounding box.
+        min_lon (float): Minimum longitude of the bounding box.
+        max_lat (float): Maximum latitude of the bounding box.
+        max_lon (float): Maximum longitude of the bounding box.
+
+    Returns:
+        int: A zoom level. Larger values indicate a closer view.
+    """
     lat_diff = max_lat - min_lat
     lon_diff = max_lon - min_lon
     max_diff = max(lat_diff, lon_diff)
@@ -125,6 +191,20 @@ def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
 
 @lru_cache(maxsize=128)
 def create_color_scale(max_val, min_val, n_colors=9):
+    """
+    Creates a dictionary mapping a range of values to a corresponding set of colors
+    arranged in a sequential color scale. If the range is zero (max_val == min_val),
+    a single color is returned. The colors are based on a 'Reds' sequential scheme.
+
+    Args:
+        max_val (float): The maximum value of the data range.
+        min_val (float): The minimum value of the data range.
+        n_colors (int): The number of colors to use in the scale.
+
+    Returns:
+        dict: A dictionary where keys are numeric breakpoints and values are color strings.
+              Each key-value pair represents a segment of the color scale.
+    """
     if max_val == min_val:
         return {min_val: cl.scales[str(n_colors)]['seq']['Reds'][-1]}
     breaks = np.linspace(min_val, max_val, n_colors)
@@ -132,27 +212,67 @@ def create_color_scale(max_val, min_val, n_colors=9):
     return dict(zip(breaks, colors))
 
 class CallbackContextManager:
+    """
+    A helper class to interpret Dash callback contexts. It simplifies the identification
+    of which input triggered the callback and whether the callback was triggered at all.
+    """
     def __init__(self, context):
+        """
+        Initializes the CallbackContextManager with the given Dash callback context.
+
+        Args:
+            context (dash.callback_context): The current callback context provided by Dash.
+        """
         self.ctx = context
         self.triggered = self.ctx.triggered[0] if self.ctx.triggered else None
         self.triggered_id = self.triggered['prop_id'].split('.')[0] if self.triggered else None
 
     @property
     def is_triggered(self):
+        """
+        Indicates whether the callback was triggered by any input.
+
+        Returns:
+            bool: True if the callback was triggered, False otherwise.
+        """
         return bool(self.ctx.triggered)
 
-# Load spatial data
 @functools.lru_cache(maxsize=1)
 def load_spatial_data():
-    province_longlat_clean = gpd.read_parquet("province_longlat_clean.parquet")
-    combined_longlat_clean = gpd.read_parquet("combined_longlat_clean.parquet")
+    """
+    Loads geospatial data for provinces and combined CMA/CA polygons from parquet files.
+    This includes coordinates and identifiers necessary for geographic rendering and
+    linking data to specific regions. The result is cached to avoid repeated disk reads.
 
+    Returns:
+        tuple: A tuple containing:
+               - A GeoDataFrame of provinces with cleaned longitude/latitude.
+               - A GeoDataFrame of combined CMA/CA regions with cleaned coordinates.
+    """
+    province_longlat_clean = gpd.read_parquet("data/province_longlat_clean.parquet")
+    combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
     return province_longlat_clean, combined_longlat_clean
 
 @functools.lru_cache(maxsize=1)
 def load_and_process_educational_data():
-    data = pd.read_pickle("cleaned_data.pkl")
+    """
+    Loads preprocessed educational data from a pickle file. The data includes variables
+    such as STEM/BHASE classification, year, institution type, and associated graduate
+    counts. The result is cached to minimize repeated I/O operations.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing cleaned and processed educational data,
+                          ready for filtering and aggregation.
+    """
+    data = pd.read_pickle("data/cleaned_data.pkl")
     
+    categorical_cols = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
+    for col in categorical_cols:
+        data[col] = data[col].astype('category')
+
+    # Set a multi-index for direct indexing
+    data = data.set_index(["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]).sort_index()
+
     return data
 
 # Load initial data
@@ -160,51 +280,103 @@ province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
 
 def filter_data(data, filters):
-    """Efficiently filter data using vectorized operations"""
-    mask = pd.Series(True, index=data.index)
-    
-    for column, values in filters.items():
-        if values:
-            mask &= data[column].isin(values)
-    
-    return data[mask]
+    """
+    Filters the multi-indexed DataFrame using direct indexing. The filters dictionary
+    contains sets of allowed values for each dimension. If a set is empty, all values
+    for that level are included. This approach uses direct .loc indexing on a multi-index.
+
+    Args:
+        data (pandas.DataFrame): The original dataset with a multi-level index.
+        filters (dict): A dictionary where keys are column names (in the index) and
+                        values are sets of acceptable values.
+
+    Returns:
+        pandas.DataFrame: The filtered DataFrame containing only rows that meet
+                          all specified conditions.
+    """
+    index_levels = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
+    selection = []
+    for lvl in index_levels:
+        if len(filters[lvl]) == 0:
+            selection.append(slice(None))
+        else:
+            selection.append(list(filters[lvl]))
+
+    try:
+        filtered = data.loc[tuple(selection)]
+    except KeyError:
+        # If no rows match, return empty DataFrame
+        return data.iloc[0:0]
+    return filtered
 
 @functools.lru_cache(maxsize=128)
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions):
-    # Create filters dictionary with frozensets for hashability
+    """
+    Applies a series of filters to the pre-indexed global data. After filtering,
+    aggregates are computed by summing over the relevant index levels rather than
+    re-grouping the entire dataset. This approach uses direct indexing for efficient
+    slicing, reducing overhead for frequent filter changes.
+
+    Args:
+        selected_stem_bhase (tuple): A tuple of STEM/BHASE categories to include.
+        selected_years (tuple): A tuple of years to include.
+        selected_provs (tuple): A tuple of provinces/territories to include.
+        selected_isced (tuple): A tuple of ISCED levels to include.
+        selected_credentials (tuple): A tuple of credential types to include.
+        selected_institutions (tuple): A tuple of institutions to include.
+
+    Returns:
+        tuple: A tuple containing:
+               - filtered_data (pandas.DataFrame): The filtered dataset at the granular level.
+               - cma_grads (pandas.DataFrame): Aggregation of graduates by CMA/CA and DGUID.
+               - isced_grads (pandas.DataFrame): Aggregation of graduates by ISCED level.
+               - province_grads (pandas.DataFrame): Aggregation of graduates by province/territory.
+    """
     filters = {
-        'STEM/BHASE': frozenset(selected_stem_bhase) if selected_stem_bhase else frozenset(),
-        'year': frozenset(selected_years) if selected_years else frozenset(),
-        'Province_Territory': frozenset(selected_provs) if selected_provs else frozenset(),
-        'ISCED_level_of_education': frozenset(selected_isced) if selected_isced else frozenset(),
-        'Credential_Type': frozenset(selected_credentials) if selected_credentials else frozenset(),
-        'Institution': frozenset(selected_institutions) if selected_institutions else frozenset()
+        'STEM/BHASE': set(selected_stem_bhase),
+        'year': set(selected_years),
+        'Province_Territory': set(selected_provs),
+        'ISCED_level_of_education': set(selected_isced),
+        'Credential_Type': set(selected_credentials),
+        'Institution': set(selected_institutions),
+        'CMA_CA': set(),
+        'DGUID': set()
     }
-    
-    # Get filtered data
+
     filtered_data = filter_data(data, filters)
-    
-    # Optimize aggregations using named aggregation
-    aggregations = {
-        'cma': filtered_data.groupby(["CMA_CA", "DGUID"])
-              .agg(graduates=('value', 'sum'))
-              .reset_index(),
-        'isced': filtered_data.groupby("ISCED_level_of_education")
-                .agg(graduates=('value', 'sum'))
-                .reset_index(),
-        'province': filtered_data.groupby("Province_Territory")
-                   .agg(graduates=('value', 'sum'))
-                   .reset_index()
-    }
-    
-    return filtered_data, aggregations['cma'], aggregations['isced'], aggregations['province']
+    if filtered_data.empty:
+        return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    # Aggregations with observed=True to suppress FutureWarning
+    cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum().reset_index(name='graduates')
+    isced_grads = filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum().reset_index(name='graduates')
+    province_grads = filtered_data.groupby("Province_Territory", observed=True)['value'].sum().reset_index(name='graduates')
+
+    return filtered_data.reset_index(), cma_grads, isced_grads, province_grads
 
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
+    """
+    Creates a GeoJSON feature dictionary for a single geographic unit (e.g., a CMA/CA).
+    Each feature includes property fields for graduates count, DGUID, and CMA/CA name.
+    The style properties are determined by the number of graduates and whether the
+    feature is currently selected. If the data range is valid, it uses a normalized
+    index into the color scale; otherwise, it falls back to a default color.
+
+    Args:
+        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit.
+        colorscale (list): A list of color strings for representing graduate counts.
+        max_graduates (int): The maximum graduates count in the dataset to map.
+        min_graduates (int): The minimum graduates count in the dataset to map.
+        selected_feature (str or None): The DGUID of the currently selected feature, if any.
+
+    Returns:
+        dict: A dictionary representing a GeoJSON feature with 'properties' and 'style'
+              attributes suitable for rendering on a Leaflet map via Dash Leaflet.
+    """
     graduates = row['graduates']
     dguid = str(row['DGUID'])
     
-    # Optimize color calculation
     if max_graduates > min_graduates:
         normalized_value = (graduates - min_graduates) / (max_graduates - min_graduates)
         color_index = int(normalized_value * (len(colorscale) - 1))
@@ -217,24 +389,39 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     return {
         'graduates': int(graduates),
         'DGUID': dguid,
-        'CMA_CA': row['NAME'],
+        'CMA_CA': row['CMA_CA'],
         'style': {
             'fillColor': 'yellow' if is_selected else color,
             'color': 'black' if is_selected else 'gray',
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
-        'tooltip': f"CMA/CA: {row['NAME']}<br>Graduates: {int(graduates)}"
+        'tooltip': f"CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates)}"
     }
 
-
-
 def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale, selected_value):
-    """Optimized chart creation with cached calculations"""
+    """
+    Creates a Plotly figure corresponding to the specified chart type (bar, line, or pie).
+    The chart visualizes graduates by the specified dimension. If the DataFrame is empty,
+    returns an empty dictionary. If data is present, calls the relevant chart-specific
+    creation function to build the figure. The chart can highlight a selected value.
+
+    Args:
+        dataframe (pandas.DataFrame): The dataset to chart.
+        x_column (str): The column name to use for the chart's category or X-axis.
+        y_column (str): The column name containing numeric data (e.g., graduates count).
+        chart_type (str): The type of chart to create. One of 'bar', 'line', or 'pie'.
+        x_label (str): The label to use for the chart's category or X-axis.
+        colorscale (list): A list of color strings for visual encoding.
+        selected_value (str or None): A category value to highlight in the chart.
+
+    Returns:
+        dict or plotly.graph_objects.Figure: A Plotly figure object or an empty dictionary
+                                             if the input DataFrame is empty.
+    """
     if dataframe.empty:
         return {}
     
-    # Pre-calculate statistics once
     stats = {
         'vmin': dataframe[y_column].quantile(0.01),
         'vmax': dataframe[y_column].max()
@@ -243,7 +430,6 @@ def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale,
     if stats['vmin'] == stats['vmax']:
         stats['vmin'] = 0
         
-    # Create charts based on type
     if chart_type == 'bar':
         return create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value)
     elif chart_type == 'line':
@@ -254,7 +440,23 @@ def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale,
     return {}
 
 def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value):
-    """Optimized bar chart creation"""
+    """
+    Constructs a horizontal bar chart using Plotly Express. The bars are sorted by the
+    numeric variable in ascending order. The figure highlights a selected category if
+    applicable. The chart displays a continuous color scale for the numeric axis unless
+    a category is highlighted, in which case it uses discrete coloring.
+
+    Args:
+        dataframe (pandas.DataFrame): The filtered and aggregated data.
+        x_column (str): The column representing categories on the Y-axis.
+        y_column (str): The numeric column representing the height of bars.
+        x_label (str): The axis label representing the category dimension.
+        stats (dict): A dictionary containing numeric statistics like vmin, vmax.
+        selected_value (str or None): A category value to highlight in the chart.
+
+    Returns:
+        plotly.graph_objects.Figure: A figure object containing the bar chart.
+    """
     sorted_data = dataframe.sort_values(y_column, ascending=True)
     
     fig = px.bar(
@@ -288,7 +490,20 @@ def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_val
     return fig
 
 def create_line_chart(dataframe, x_column, y_column, x_label):
-    """Optimized line chart creation"""
+    """
+    Constructs a line chart using Plotly Express. The line is drawn across the provided
+    categories sorted in ascending order. This chart type is suitable for data that
+    changes over a continuous or ordered dimension.
+
+    Args:
+        dataframe (pandas.DataFrame): The dataset containing at least the specified columns.
+        x_column (str): The column representing categories on the X-axis.
+        y_column (str): The numeric column representing the line values.
+        x_label (str): The label to apply to the X-axis.
+
+    Returns:
+        plotly.graph_objects.Figure: A figure object containing the line chart.
+    """
     sorted_data = dataframe.sort_values(x_column, ascending=True)
     
     fig = px.line(
@@ -310,7 +525,21 @@ def create_line_chart(dataframe, x_column, y_column, x_label):
     return fig
 
 def create_pie_chart(dataframe, x_column, y_column, x_label, selected_value):
-    """Optimized pie chart creation"""
+    """
+    Constructs a pie chart using Plotly Express. Each slice corresponds to a category
+    and represents its share of the total graduates. If a slice is selected, it is
+    pulled out slightly for emphasis.
+
+    Args:
+        dataframe (pandas.DataFrame): The dataset containing the categories and values.
+        x_column (str): The column representing categories.
+        y_column (str): The numeric column representing slice sizes.
+        x_label (str): The label to include in the chart title.
+        selected_value (str or None): A category value to highlight by pulling its slice.
+
+    Returns:
+        plotly.graph_objects.Figure: A figure object containing the pie chart.
+    """
     fig = px.pie(
         dataframe,
         names=x_column,
@@ -332,7 +561,24 @@ def create_pie_chart(dataframe, x_column, y_column, x_label, selected_value):
     return fig
 
 def create_empty_response():
-    """Create empty response for error cases"""
+    """
+    Produces a set of empty or default return values for callbacks that must always
+    return consistent output structures even when data is unavailable or an error
+    occurs. The empty response includes:
+    - An empty GeoJSON structure for the map.
+    - Empty figure objects for charts.
+    - Empty lists for table data and columns.
+    - A default viewport centered on Canada.
+
+    Returns:
+        tuple: A tuple containing empty or default components:
+               - Empty geojson data (dict)
+               - Empty figure for ISCED chart (dict)
+               - Empty figure for province chart (dict)
+               - Empty data for the table (list)
+               - Empty columns for the table (list)
+               - A default viewport dictionary with bounds and transition
+    """
     empty_geojson = {'type': 'FeatureCollection', 'features': []}
     empty_fig = {}
     empty_data = []
@@ -348,19 +594,52 @@ def create_empty_response():
         dict(bounds=default_bounds, transition="flyToBounds")
     )
 
+def update_selected_value(click_data, n_clicks, stored_value, triggered_id, clear_id, chart_id, figure=None):
+    """
+    A generic helper function that updates a selected value based on chart click interactions
+    and a clear selection button.
+
+    Args:
+        click_data (dict or None): Data from a chart click event. Contains 'points' with clicked category.
+        n_clicks (int): Number of times the clear selection button was clicked.
+        stored_value (str or None): Currently stored selected value.
+        triggered_id (str): The ID of the component that triggered this callback.
+        clear_id (str): The ID of the 'Clear Selection' button.
+        chart_id (str): The ID of the chart component that triggers selection updates.
+        figure (dict or None): The chart figure dictionary. If provided and the chart is a bar chart,
+                               its orientation helps determine which axis value to read.
+
+    Returns:
+        str or None: The updated selected value. Returns None to clear it.
+    """
+    if triggered_id == clear_id:
+        return None
+
+    if triggered_id == chart_id and click_data and 'points' in click_data:
+        orientation = 'v'
+        if figure and figure.get('data') and figure['data'][0].get('orientation') == 'h':
+            orientation = 'h'
+        
+        if orientation == 'h':
+            clicked_value = click_data['points'][0]['y']
+        else:
+            clicked_value = click_data['points'][0]['x']
+
+        return None if stored_value == clicked_value else clicked_value
+
+    return stored_value
+
 # Generate initial filter options
-stem_bhase_options_full = [{'label': stem, 'value': stem} for stem in sorted(data['STEM/BHASE'].unique())]
-year_options_full = [{'label': year, 'value': year} for year in sorted(data['year'].unique())]
-prov_options_full = [{'label': prov, 'value': prov} for prov in sorted(data['Province_Territory'].unique())]
-isced_options_full = [{'label': level, 'value': level} for level in sorted(data['ISCED_level_of_education'].unique())]
-credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data['Credential_Type'].unique())]
-institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data['Institution'].unique())]
+stem_bhase_options_full = [{'label': stem, 'value': stem} for stem in sorted(data.index.get_level_values('STEM/BHASE').unique())]
+year_options_full = [{'label': year, 'value': year} for year in sorted(data.index.get_level_values('year').unique())]
+prov_options_full = [{'label': prov, 'value': prov} for prov in sorted(data.index.get_level_values('Province_Territory').unique())]
+isced_options_full = [{'label': level, 'value': level} for level in sorted(data.index.get_level_values('ISCED_level_of_education').unique())]
+credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential_Type').unique())]
+institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
 # Create the app layout
 app.layout = dbc.Container([
     html.H1("Interactive Choropleth Map of STEM/BHASE Graduates in Canada", className="my-4"),
-
-    # Define the layout for filters and map
     dbc.Row([
         dbc.Col([
             html.H5("Filters"),
@@ -476,7 +755,6 @@ app.layout = dbc.Container([
                         ),
                     ],
                     style={'width': '100%', 'height': '600px'},
-                    # Remove updateTrigger as it's not needed
                 ),
             ], style={"height": "600px"}),
 
@@ -529,7 +807,22 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
-    """Helper function to determine viewport updates"""
+    """
+    Determines an appropriate viewport update based on the user interaction that
+    triggered the callback. If the triggered action is selecting a CMA/CA feature,
+    it adjusts the viewport to zoom in on that feature. If filters changed, it
+    recalculates bounds to show all visible features. If no adjustments are needed,
+    it returns None.
+
+    Args:
+        triggered_id (str): The ID of the component that triggered the callback.
+        cma_data (geopandas.GeoDataFrame): The spatial data with graduates information.
+        selected_feature (str or None): The currently selected CMA/CA DGUID, if any.
+
+    Returns:
+        dict or None: A dictionary defining the new viewport or None if no update
+                      is required.
+    """
     if triggered_id == 'selected-cma' and selected_feature:
         # For clicked features, zoom to the selected feature
         selected_geometry = cma_data[cma_data['DGUID'] == selected_feature]
@@ -539,8 +832,8 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
             viewport['zoom'] = 8  # Fixed zoom for selections
             return viewport
     elif triggered_id in ['stem-bhase-filter', 'year-filter', 'prov-filter', 
-                         'isced-filter', 'credential-filter', 'institution-filter',
-                         'reset-filters', 'clear-selection']:
+                          'isced-filter', 'credential-filter', 'institution-filter',
+                          'reset-filters', 'clear-selection']:
         # For filter changes, zoom to show all visible features
         if not cma_data.empty:
             bounds = cma_data.total_bounds
@@ -557,6 +850,19 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     prevent_initial_call=True
 )
 def update_selected_feature(click_data, n_clicks, stored_cma):
+    """
+    Updates the currently selected CMA/CA feature when the map is clicked. If the
+    'Clear Selection' button is clicked, resets the selection. This ensures that
+    the selected feature state remains synchronized with user actions on the map.
+
+    Args:
+        click_data (dict or None): Data associated with a map feature click.
+        n_clicks (int): The number of times the 'Clear Selection' button was clicked.
+        stored_cma (str or None): The currently stored CMA/CA DGUID.
+
+    Returns:
+        str or None: The updated selected CMA/CA DGUID or None if the selection is cleared.
+    """
     ctx_manager = CallbackContextManager(callback_context)
     
     if not ctx_manager.is_triggered:
@@ -569,32 +875,46 @@ def update_selected_feature(click_data, n_clicks, stored_cma):
         clicked_id = click_data['points'][0]['featureId']
         return None if stored_cma == clicked_id else clicked_id
         
-    return None
+    return stored_cma
 
-# Optimized callback for ISCED selection with better error handling
 @app.callback(
     Output('selected-isced', 'data'),
     Input('graph-isced', 'clickData'),
     Input('clear-selection', 'n_clicks'),
     State('selected-isced', 'data'),
+    State('graph-isced', 'figure'),
     prevent_initial_call=True
 )
-def update_selected_isced(clickData, n_clicks, stored_isced):
-    ctx_manager = CallbackContextManager(callback_context)
-    
-    if not ctx_manager.is_triggered:
-        raise dash.exceptions.PreventUpdate
-        
-    if ctx_manager.triggered_id == 'clear-selection':
-        return None
-        
-    if ctx_manager.triggered_id == 'graph-isced' and clickData and 'points' in clickData:
-        clicked_value = clickData['points'][0]['y']
-        return None if stored_isced == clicked_value else clicked_value
-        
-    return stored_isced
+def update_selected_isced(clickData, n_clicks, stored_isced, figure):
+    """
+    Updates the selected ISCED level when the user interacts with the ISCED chart.
+    If a slice or bar is clicked, this updates the selected ISCED level. If 'Clear
+    Selection' is clicked, it resets the selection. Maintains synchronization with
+    chart interactions.
 
-# Optimized callback for province selection
+    Args:
+        clickData (dict or None): Data from a chart click event that includes the selected category.
+        n_clicks (int): The count of 'Clear Selection' button clicks.
+        stored_isced (str or None): The currently selected ISCED level.
+        figure (dict): The current figure object to determine chart orientation.
+
+    Returns:
+        str or None: The updated selected ISCED level or None if the selection is cleared.
+    """
+    ctx_manager = CallbackContextManager(callback_context)
+    if not ctx_manager.is_triggered:
+        raise PreventUpdate
+
+    return update_selected_value(
+        click_data=clickData,
+        n_clicks=n_clicks,
+        stored_value=stored_isced,
+        triggered_id=ctx_manager.triggered_id,
+        clear_id='clear-selection',
+        chart_id='graph-isced',
+        figure=figure
+    )
+
 @app.callback(
     Output('selected-province', 'data'),
     Input('graph-province', 'clickData'),
@@ -604,23 +924,39 @@ def update_selected_isced(clickData, n_clicks, stored_isced):
     prevent_initial_call=True
 )
 def update_selected_province(clickData, n_clicks, stored_province, figure):
+    """
+    Updates the selected province when the user interacts with the province chart.
+    If a bar or slice is clicked, the selection updates accordingly. If 'Clear Selection'
+    is clicked, the selection is reset. The function also interprets chart orientation
+    to determine which axis value corresponds to the province.
+
+    Args:
+        clickData (dict or None): Data from a chart click event that includes the clicked province.
+        n_clicks (int): The count of 'Clear Selection' button clicks.
+        stored_province (str or None): The currently selected province.
+        figure (dict): The current figure object to determine chart orientation.
+
+    Returns:
+        str or None: The updated selected province or None if the selection is cleared.
+    """
     ctx_manager = CallbackContextManager(callback_context)
-    
     if not ctx_manager.is_triggered:
-        raise dash.exceptions.PreventUpdate
-        
-    if ctx_manager.triggered_id == 'clear-selection':
-        return None
-        
-    if ctx_manager.triggered_id == 'graph-province' and clickData and 'points' in clickData:
-        orientation = figure['data'][0].get('orientation', 'v')
-        clicked_value = clickData['points'][0]['y' if orientation == 'h' else 'x']
-        return None if stored_province == clicked_value else clicked_value
-        
-    return stored_province
+        raise PreventUpdate
+
+    return update_selected_value(
+        click_data=clickData,
+        n_clicks=n_clicks,
+        stored_value=stored_province,
+        triggered_id=ctx_manager.triggered_id,
+        clear_id='clear-selection',
+        chart_id='graph-province',
+        figure=figure
+    )
 
 def update_map_style(geojson_data, colorscale, selected_feature=None):
-    """Create a Patch object for updating map styles"""
+    """
+    Create a Patch object for updating map styles.
+    """
     patched_geojson = Patch()
     
     if not geojson_data or 'features' not in geojson_data:
@@ -630,7 +966,6 @@ def update_map_style(geojson_data, colorscale, selected_feature=None):
         dguid = feature['properties']['DGUID']
         is_selected = selected_feature and dguid == selected_feature
         
-        # Update only style properties that need to change
         style_updates = {
             'fillColor': 'yellow' if is_selected else feature['properties']['style']['fillColor'],
             'color': 'black' if is_selected else 'gray',
@@ -641,7 +976,6 @@ def update_map_style(geojson_data, colorscale, selected_feature=None):
     
     return patched_geojson
 
-# Add hover callback
 @app.callback(
     Output('cma-geojson', 'data', allow_duplicate=True),
     Input('cma-geojson', 'hover_feature'),
@@ -649,7 +983,18 @@ def update_map_style(geojson_data, colorscale, selected_feature=None):
     prevent_initial_call=True
 )
 def update_hover_style(hover_feature, current_geojson):
-    """Update map styles on hover"""
+    """
+    Adjusts the styling of GeoJSON features on the map when a user hovers over them.
+    The hovered feature is highlighted to provide visual feedback, and previously
+    hovered features are reverted to their original style.
+
+    Args:
+        hover_feature (dict or None): The feature currently hovered, containing its 'id'.
+        current_geojson (dict): The current GeoJSON data displayed on the map.
+
+    Returns:
+        dash_table.Patch: A Patch object representing the updated styling instructions.
+    """
     if not hover_feature or not current_geojson:
         raise PreventUpdate
         
@@ -677,11 +1022,22 @@ def update_hover_style(hover_feature, current_geojson):
     prevent_initial_call=True
 )
 def handle_map_movement(viewport):
+    """
+    Updates the global map state when the user moves the map (pans or zooms). If the
+    viewport contains updated bounds, these are stored so that future updates can be
+    managed based on the current state. Does not modify the viewport further, only
+    updates state tracking.
+
+    Args:
+        viewport (dict): The current viewport state of the map, including bounds and zoom.
+
+    Returns:
+        no_update: Indicates no modification to outputs.
+    """
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
     
-    # Update map state with the new viewport
     if viewport and 'bounds' in viewport:
         map_state.update_state(bounds=viewport['bounds'])
     
@@ -708,11 +1064,35 @@ def handle_map_movement(viewport):
     State('map', 'viewport')
 )
 def update_visualizations(*args):
+    """
+    The primary callback that responds to user input changes from filters, charts,
+    and map selections. It:
+    - Filters and preprocesses the data based on selected criteria.
+    - Applies cross-filtering based on the currently selected ISCED level, province,
+      and CMA/CA feature.
+    - Updates the GeoJSON map layer, ISCED chart, province chart, and the CMA/CA table.
+    - Adjusts the map viewport if needed.
+
+    If no data matches the filters or an error occurs, it returns empty structures.
+
+    Args:
+        *args: A list of inputs including filter values, chart types, selected ISCED,
+               selected province, selected CMA, and the current map viewport.
+
+    Returns:
+        tuple: A tuple of updated components for the map, charts, table, and viewport.
+               - GeoJSON data for the map
+               - Figure for ISCED chart
+               - Figure for province chart
+               - Data for the CMA/CA table
+               - Columns for the CMA/CA table
+               - Updated viewport settings
+    """
     try:
-        current_viewport = args[-1]  # Get the current viewport state
+        current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, 
          chart_type_isced, chart_type_province, selected_isced, 
-         selected_province, selected_feature) = args[:-1]  # Get other inputs
+         selected_province, selected_feature) = args[:-1]
         
         ctx = callback_context
         if not ctx.triggered:
@@ -732,22 +1112,23 @@ def update_visualizations(*args):
         
         # Apply cross-filtering with vectorized operations
         if any([selected_isced, selected_province, selected_feature]):
-            filter_conditions = pd.Series(True, index=filtered_data.index)
-            
+            mask = pd.Series(True, index=filtered_data.index)
             if selected_isced:
-                filter_conditions &= filtered_data['ISCED_level_of_education'] == selected_isced
+                mask &= filtered_data['ISCED_level_of_education'] == selected_isced
             if selected_province:
-                filter_conditions &= filtered_data['Province_Territory'] == selected_province
+                mask &= filtered_data['Province_Territory'] == selected_province
             if selected_feature:
-                filter_conditions &= filtered_data['DGUID'] == selected_feature
-                
-            filtered_data = filtered_data[filter_conditions]
-            
-            # Recalculate aggregations efficiently
-            cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"]).agg(graduates=('value', 'sum')).reset_index()
-            isced_grads = filtered_data.groupby("ISCED_level_of_education").agg(graduates=('value', 'sum')).reset_index()
-            province_grads = filtered_data.groupby("Province_Territory").agg(graduates=('value', 'sum')).reset_index()
-        
+                mask &= filtered_data['DGUID'] == selected_feature
+
+            filtered_data = filtered_data[mask]
+            if filtered_data.empty:
+                return create_empty_response()
+
+            # Aggregations with observed=True
+            cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum().reset_index(name='graduates')
+            isced_grads = filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum().reset_index(name='graduates')
+            province_grads = filtered_data.groupby("Province_Territory", observed=True)['value'].sum().reset_index(name='graduates')
+
         # Prepare map data efficiently
         cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='left')
         cma_data['graduates'] = cma_data['graduates'].fillna(0)
@@ -756,7 +1137,6 @@ def update_visualizations(*args):
         if cma_data.empty:
             return create_empty_response()
         
-        # Only update viewport for specific triggers
         should_update_viewport = triggered_id in [
             'stem-bhase-filter', 'year-filter', 'prov-filter',
             'isced-filter', 'credential-filter', 'institution-filter',
@@ -764,7 +1144,6 @@ def update_visualizations(*args):
         ]
         
         if should_update_viewport:
-            # Calculate bounds with padding
             bounds = cma_data.total_bounds
             lat_padding = (bounds[3] - bounds[1]) * 0.1
             lon_padding = (bounds[2] - bounds[0]) * 0.1
@@ -836,37 +1215,21 @@ def update_visualizations(*args):
         return create_empty_response()
 
 def create_patched_selection(data, column, selected_value, chart_type):
+    """
+    Create a Patch object to highlight a selected category in a given chart.
+    """
     patched_figure = Patch()
     
     if chart_type == 'bar':
-        colors = ['grey' if x != selected_value else 'red' 
-                 for x in data[column]]
+        colors = ['grey' if x != selected_value else 'red' for x in data[column]]
         patched_figure['data'][0]['marker']['color'] = colors
         
     elif chart_type == 'pie':
-        pull = [0.1 if x == selected_value else 0 
-                for x in data[column]]
+        pull = [0.1 if x == selected_value else 0 for x in data[column]]
         patched_figure['data'][0]['pull'] = pull
         
     return patched_figure
 
-def create_empty_response():
-    empty_geojson = {'type': 'FeatureCollection', 'features': []}
-    empty_fig = {}
-    empty_data = []
-    empty_columns = []
-    default_bounds = [[41, -141], [83, -52]]
-    
-    return (
-        empty_geojson,
-        empty_fig,
-        empty_fig,
-        empty_data,
-        empty_columns,
-        dict(bounds=default_bounds, transition=dict(duration=1000))
-    )
-
-# Add a callback for filter reset
 @app.callback(
     Output('stem-bhase-filter', 'value'),
     Output('year-filter', 'value'),
@@ -878,8 +1241,19 @@ def create_empty_response():
     prevent_initial_call=True
 )
 def reset_filters(n_clicks):
+    """
+    Resets all data filters back to their default values. This clears any user-applied
+    restrictions, ensuring that the dataset and visualizations return to their initial
+    state.
+
+    Args:
+        n_clicks (int): The number of times the 'Reset Filters' button has been clicked.
+
+    Returns:
+        tuple: A tuple containing the default values for each filter component.
+    """
     if not n_clicks:
-        raise dash.exceptions.PreventUpdate
+        raise PreventUpdate
         
     return (
         [option['value'] for option in stem_bhase_options_full],
