@@ -408,40 +408,16 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     }
 
 @cache.memoize(expire=300)  # Cache for 5 minutes
-def create_chart(dataframe, x_column, y_column, x_label, colorscale, selected_value):
-    """Creates a bar chart using Plotly Express."""
+def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
+    """Creates a horizontal bar chart."""
     if dataframe.empty:
         return {}
     
-    stats = {
-        'vmin': dataframe[y_column].quantile(0.01),
-        'vmax': dataframe[y_column].max()
-    }
-    
-    if stats['vmin'] == stats['vmax']:
-        stats['vmin'] = 0
-        
-    return create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value)
-
-def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value):
-    """
-    Constructs a horizontal bar chart using Plotly Express. The bars are sorted by the
-    numeric variable in ascending order. The figure highlights a selected category if
-    applicable. The chart displays a continuous color scale for the numeric axis unless
-    a category is highlighted, in which case it uses discrete coloring.
-
-    Args:
-        dataframe (pandas.DataFrame): The filtered and aggregated data.
-        x_column (str): The column representing categories on the Y-axis.
-        y_column (str): The numeric column representing the height of bars.
-        x_label (str): The axis label representing the category dimension.
-        stats (dict): A dictionary containing numeric statistics like vmin, vmax.
-        selected_value (str or None): A category value to highlight in the chart.
-
-    Returns:
-        plotly.graph_objects.Figure: A figure object containing the bar chart.
-    """
     sorted_data = dataframe.sort_values(y_column, ascending=True)
+    stats = {
+        'vmin': sorted_data[y_column].quantile(0.01),
+        'vmax': sorted_data[y_column].max() or 0
+    }
     
     fig = px.bar(
         sorted_data,
@@ -456,10 +432,7 @@ def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_val
     )
     
     if selected_value:
-        colors = ['grey'] * len(sorted_data)
-        idx = sorted_data[sorted_data[x_column] == selected_value].index
-        if not idx.empty:
-            colors[idx[0]] = 'red'
+        colors = ['grey' if x != selected_value else 'red' for x in sorted_data[x_column]]
         fig.data[0].marker.color = colors
         fig.update_coloraxes(showscale=False)
     
@@ -1071,7 +1044,6 @@ def update_visualizations(*args):
             'ISCED_level_of_education', 
             'graduates',
             'ISCED Level of Education', 
-            colorscale, 
             selected_isced
         )
         
@@ -1080,7 +1052,6 @@ def update_visualizations(*args):
             'Province_Territory', 
             'graduates',
             'Province/Territory', 
-            colorscale, 
             selected_province
         )
         
@@ -1100,22 +1071,6 @@ def update_visualizations(*args):
     except Exception as e:
         print(f"Error in update_visualizations: {str(e)}")
         return create_empty_response()
-
-def create_patched_selection(data, column, selected_value, chart_type):
-    """
-    Create a Patch object to highlight a selected category in a given chart.
-    """
-    patched_figure = Patch()
-    
-    if chart_type == 'bar':
-        colors = ['grey' if x != selected_value else 'red' for x in data[column]]
-        patched_figure['data'][0]['marker']['color'] = colors
-        
-    elif chart_type == 'pie':
-        pull = [0.1 if x == selected_value else 0 for x in data[column]]
-        patched_figure['data'][0]['pull'] = pull
-        
-    return patched_figure
 
 @app.callback(
     Output('stem-bhase-filter', 'value'),
