@@ -428,6 +428,50 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
         aggregations['province'].reset_index(name='graduates')
     )
 
+# Update color constants
+PRIMARY_RED = '#C01823'
+DARK_BLUE = '#00758D'
+MAIN_BLUE = '#008FBE'
+LIGHT_BLUE = '#B8D8EB'
+IIC_BLACK = '#24272A'
+GREY = '#54575A'
+LIGHT_GREY = '#97989A'
+
+# Custom color sequence for choropleth maps
+CUSTOM_REDS = [
+    '#FFE5E6',  # Lightest
+    '#FFCCCD',
+    '#FF9999',
+    '#FF6666',
+    '#FF3333',
+    '#FF0000',
+    '#CC0000',
+    '#990000',
+    '#C01823'   # Darkest - matches brand red
+]
+
+def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
+    """
+    Creates a GeoJSON feature dictionary for a single geographic unit (e.g., a CMA/CA).
+    Each feature includes property fields for graduates count, DGUID, and CMA/CA name.
+    The style properties are determined by the number of graduates and whether the
+    feature is currently selected. If the data range is valid, it uses a normalized
+    index into the color scale; otherwise, it falls back to a default color.
+
+    Args:
+        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit.
+        colorscale (list): A list of color strings for representing graduate counts.
+        max_graduates (int): The maximum graduates count in the dataset to map.
+        min_graduates (int): The minimum graduates count in the dataset to map.
+        selected_feature (str or None): The DGUID of the currently selected feature, if any.
+
+    Returns:
+        dict: A dictionary representing a GeoJSON feature with 'properties' and 'style'
+              attributes suitable for rendering on a Leaflet map via Dash Leaflet.
+    """
+    graduates = float(row['graduates'])  # Convert to float for faster comparisons
+    dguid = str(row['DGUID'])
+    is_selected = selected_feature and dguid == selected_feature
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
     """
     Creates a GeoJSON feature dictionary for a single geographic unit (e.g., a CMA/CA).
@@ -458,13 +502,19 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     else:
         color = colorscale[0] if graduates > 0 else 'lightgray'
     
+    # Add feature simplification for better performance
+    if row.geometry:
+        geometry = row.geometry.simplify(0.01).__geo_interface__
+    else:
+        geometry = None
+
     return {
         'graduates': int(graduates),
         'DGUID': dguid,
         'CMA_CA': row['CMA_CA'],
         'style': {
-            'fillColor': 'yellow' if is_selected else color,
-            'color': 'black' if is_selected else 'gray',
+            'fillColor': MAIN_BLUE if is_selected else color,
+            'color': IIC_BLACK if is_selected else GREY,
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
@@ -492,12 +542,12 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         title=f'Number of Graduates by {x_label}',
         labels={y_column: 'Number of Graduates', x_column: x_label},
         color=y_column,
-        color_continuous_scale=px.colors.sequential.Reds,
+        color_continuous_scale=[LIGHT_BLUE, MAIN_BLUE, DARK_BLUE],
         range_color=[stats['vmin'], stats['vmax']]
     )
     
     if selected_value:
-        colors = ['grey' if x != selected_value else 'red' for x in sorted_data[x_column]]
+        colors = [LIGHT_GREY if x != selected_value else PRIMARY_RED for x in sorted_data[x_column]]
         fig.data[0].marker.color = colors
         fig.update_coloraxes(showscale=False)
     
@@ -506,7 +556,10 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         yaxis_title=x_label,
         height=500,
         margin=dict(l=50, r=50, t=50, b=50),
-        clickmode='event+select'
+        clickmode='event+select',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font={'color': IIC_BLACK}
     )
     
     return fig
@@ -650,13 +703,40 @@ app.layout = dbc.Container([
                 searchable=True,
                 style={"margin-bottom": "15px"}
             ),
-            html.Button('Reset Filters', id='reset-filters', n_clicks=0, style={"margin-top": "15px"}),
-            html.Button('Clear Selection', id='clear-selection', n_clicks=0, style={"margin-top": "15px"}),
+            html.Button('Reset Filters', 
+                id='reset-filters', 
+                n_clicks=0, 
+                style={
+                    "margin-top": "15px",
+                    "background-color": MAIN_BLUE,
+                    "color": "white",
+                    "border": "none",
+                    "padding": "10px 20px",
+                    "border-radius": "5px",
+                    "margin-right": "10px"
+                }
+            ),
+            html.Button('Clear Selection', 
+                id='clear-selection', 
+                n_clicks=0, 
+                style={
+                    "margin-top": "15px",
+                    "background-color": LIGHT_GREY,
+                    "color": IIC_BLACK,
+                    "border": "none",
+                    "padding": "10px 20px",
+                    "border-radius": "5px"
+                }
+            ),
             # Add dcc.Store components to store selected data for cross-filtering
             dcc.Store(id='selected-isced', data=None),
             dcc.Store(id='selected-province', data=None),
             dcc.Store(id='selected-cma', data=None),
-        ], width=3, style={"background-color": "#f8f9fa", "padding": "20px"}),
+        ], width=3, style={
+            "background-color": LIGHT_GREY,
+            "padding": "20px",
+            "border-radius": "5px"
+        }),
 
         dbc.Col([
             html.Div([
@@ -727,7 +807,16 @@ app.layout = dbc.Container([
                 columns=[],  # Placeholder for table columns
                 data=[],  # Placeholder for table data
                 style_table={'height': '400px', 'overflowY': 'auto'},
-                style_cell={'textAlign': 'left'},
+                style_cell={
+                    'textAlign': 'left',
+                    'color': IIC_BLACK,
+                    'backgroundColor': 'white'
+                },
+                style_header={
+                    'backgroundColor': LIGHT_BLUE,
+                    'color': IIC_BLACK,
+                    'fontWeight': 'bold'
+                },
                 page_action='none',  # Disable pagination
                 sort_action='native',  # Enable sorting
                 filter_action='native',  # Enable filtering
@@ -936,6 +1025,7 @@ def update_hover_style(hover_feature, current_geojson):
         if feature_id == hover_id:
             patched_geojson['features'][i]['properties']['style'].update({
                 'weight': 3,
+                'color': DARK_BLUE,
                 'fillOpacity': 0.9
             })
         elif feature['properties']['style'].get('weight') == 3:
@@ -1106,7 +1196,7 @@ def update_visualizations(*args):
             viewport_output = dash.no_update
             
         # Create GeoJSON efficiently
-        colorscale = cl.scales['9']['seq']['Reds']
+        colorscale = CUSTOM_REDS
         max_graduates = cma_data['graduates'].max()
         min_graduates = cma_data['graduates'].min()
         
@@ -1193,4 +1283,3 @@ def reset_filters(n_clicks):
 
 if __name__ == '__main__':
     app.run_server(debug=False)
-
