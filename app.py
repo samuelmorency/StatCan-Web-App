@@ -13,6 +13,7 @@ import time
 import numpy as np
 from functools import lru_cache
 from diskcache import Cache
+from layout import create_layout
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -638,6 +639,9 @@ credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(dat
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
 # Create the app layout
+app.layout = create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full)
+
+''' Layout backup
 app.layout = dbc.Container([
     html.H1("Interactive Choropleth Map of STEM/BHASE Graduates in Canada", className="my-4"),
     dbc.Row([
@@ -806,6 +810,7 @@ app.layout = dbc.Container([
         ], width=9)
     ])
 ], fluid=True)
+'''
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """
