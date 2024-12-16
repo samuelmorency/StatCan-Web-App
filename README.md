@@ -1,12 +1,5 @@
-# STEM/BHASE Graduate Data Visualization
-
-Interactive visualization of STEM/BHASE graduates across Canadian institutions using Dash and Leaflet.
-
-## Features
-- Interactive choropleth map showing graduate distribution
-- Cross-filtering capabilities across multiple dimensions
-- Real-time data updates and responsive design
-- Efficient data caching and state management
+# Introduction 
+TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
 
 # Getting Started
 TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
