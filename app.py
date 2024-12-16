@@ -647,6 +647,47 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H5("Filters"),
+            dbc.Button(
+                html.I(className="fas fa-info-circle"),
+                id="filter-info",
+                color="link",
+                className="p-0 mb-2"
+            ),
+            dcc.Tooltip(
+                id="filter-tooltip",
+                children="Use these filters to narrow down the data displayed on the map and charts.",
+                style={
+                    'backgroundColor': 'white',
+                    'color': 'black',
+                    'border': '1px solid #ccc',
+                    'padding': '10px',
+                    'fontSize': '12px'
+                }
+            ),
+            html.Label([
+                "STEM/BHASE ",
+                dbc.Button(
+                    html.I(className="fas fa-info-circle"),
+                    id="stem-info",
+                    color="link",
+                    size="sm",
+                    className="p-0"
+                ),
+            ]),
+            dcc.Tooltip(
+                id="stem-tooltip",
+                children=[
+                    html.P("STEM: Science, Technology, Engineering, Mathematics"),
+                    html.P("BHASE: Business, Humanities, Arts, Social Science, Education")
+                ],
+                style={
+                    'backgroundColor': 'white',
+                    'color': 'black',
+                    'border': '1px solid #ccc',
+                    'padding': '10px',
+                    'fontSize': '12px'
+                }
+            ),
             html.Label("STEM/BHASE:"),
             dcc.Checklist(
                 id='stem-bhase-filter',
@@ -732,6 +773,7 @@ app.layout = dbc.Container([
             dcc.Store(id='selected-isced', data=None),
             dcc.Store(id='selected-province', data=None),
             dcc.Store(id='selected-cma', data=None),
+            # Remove download buttons and components
         ], width=3, style={
             "background-color": LIGHT_GREY,
             "padding": "20px",
@@ -739,6 +781,7 @@ app.layout = dbc.Container([
         }),
 
         dbc.Col([
+            # Remove Spinner from map, keep direct map component
             html.Div([
                 dl.Map(
                     id='map',
@@ -790,13 +833,22 @@ app.layout = dbc.Container([
                 ),
             ], style={"height": "600px"}),
 
+            # Keep existing spinners for charts
             # Arrange the two graphs side by side with chart type selection
             dbc.Row([
                 dbc.Col([
-                    dcc.Graph(id='graph-isced'),  # Graph for ISCED level of education
+                    dbc.Spinner(
+                        dcc.Graph(id='graph-isced'),
+                        color="primary",
+                        type="border",
+                    ),
                 ], width=6),
                 dbc.Col([
-                    dcc.Graph(id='graph-province'),  # Graph for provinces
+                    dbc.Spinner(
+                        dcc.Graph(id='graph-province'),
+                        color="primary",
+                        type="border",
+                    ),
                 ], width=6)
             ]),
 
