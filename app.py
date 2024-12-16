@@ -408,26 +408,8 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     }
 
 @cache.memoize(expire=300)  # Cache for 5 minutes
-def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale, selected_value):
-    """
-    Creates a Plotly figure corresponding to the specified chart type (bar, line, or pie).
-    The chart visualizes graduates by the specified dimension. If the DataFrame is empty,
-    returns an empty dictionary. If data is present, calls the relevant chart-specific
-    creation function to build the figure. The chart can highlight a selected value.
-
-    Args:
-        dataframe (pandas.DataFrame): The dataset to chart.
-        x_column (str): The column name to use for the chart's category or X-axis.
-        y_column (str): The column name containing numeric data (e.g., graduates count).
-        chart_type (str): The type of chart to create. One of 'bar', 'line', or 'pie'.
-        x_label (str): The label to use for the chart's category or X-axis.
-        colorscale (list): A list of color strings for visual encoding.
-        selected_value (str or None): A category value to highlight in the chart.
-
-    Returns:
-        dict or plotly.graph_objects.Figure: A Plotly figure object or an empty dictionary
-                                             if the input DataFrame is empty.
-    """
+def create_chart(dataframe, x_column, y_column, x_label, colorscale, selected_value):
+    """Creates a bar chart using Plotly Express."""
     if dataframe.empty:
         return {}
     
@@ -439,14 +421,7 @@ def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale,
     if stats['vmin'] == stats['vmax']:
         stats['vmin'] = 0
         
-    if chart_type == 'bar':
-        return create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value)
-    elif chart_type == 'line':
-        return create_line_chart(dataframe, x_column, y_column, x_label)
-    elif chart_type == 'pie':
-        return create_pie_chart(dataframe, x_column, y_column, x_label, selected_value)
-    
-    return {}
+    return create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value)
 
 def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_value):
     """
@@ -491,77 +466,6 @@ def create_bar_chart(dataframe, x_column, y_column, x_label, stats, selected_val
     fig.update_layout(
         xaxis_title='Number of Graduates',
         yaxis_title=x_label,
-        height=500,
-        margin=dict(l=50, r=50, t=50, b=50),
-        clickmode='event+select'
-    )
-    
-    return fig
-
-def create_line_chart(dataframe, x_column, y_column, x_label):
-    """
-    Constructs a line chart using Plotly Express. The line is drawn across the provided
-    categories sorted in ascending order. This chart type is suitable for data that
-    changes over a continuous or ordered dimension.
-
-    Args:
-        dataframe (pandas.DataFrame): The dataset containing at least the specified columns.
-        x_column (str): The column representing categories on the X-axis.
-        y_column (str): The numeric column representing the line values.
-        x_label (str): The label to apply to the X-axis.
-
-    Returns:
-        plotly.graph_objects.Figure: A figure object containing the line chart.
-    """
-    sorted_data = dataframe.sort_values(x_column, ascending=True)
-    
-    fig = px.line(
-        sorted_data,
-        x=x_column,
-        y=y_column,
-        title=f'Number of Graduates by {x_label}',
-        labels={y_column: 'Number of Graduates', x_column: x_label},
-    )
-    
-    fig.update_layout(
-        xaxis_title=x_label,
-        yaxis_title='Number of Graduates',
-        height=500,
-        margin=dict(l=50, r=50, t=50, b=50),
-        clickmode='event+select'
-    )
-    
-    return fig
-
-def create_pie_chart(dataframe, x_column, y_column, x_label, selected_value):
-    """
-    Constructs a pie chart using Plotly Express. Each slice corresponds to a category
-    and represents its share of the total graduates. If a slice is selected, it is
-    pulled out slightly for emphasis.
-
-    Args:
-        dataframe (pandas.DataFrame): The dataset containing the categories and values.
-        x_column (str): The column representing categories.
-        y_column (str): The numeric column representing slice sizes.
-        x_label (str): The label to include in the chart title.
-        selected_value (str or None): A category value to highlight by pulling its slice.
-
-    Returns:
-        plotly.graph_objects.Figure: A figure object containing the pie chart.
-    """
-    fig = px.pie(
-        dataframe,
-        names=x_column,
-        values=y_column,
-        title=f'Number of Graduates by {x_label}',
-        color_discrete_sequence=px.colors.sequential.Reds,
-    )
-    
-    if selected_value:
-        pull = [0.1 if name == selected_value else 0 for name in dataframe[x_column]]
-        fig.update_traces(pull=pull)
-    
-    fig.update_layout(
         height=500,
         margin=dict(l=50, r=50, t=50, b=50),
         clickmode='event+select'
@@ -771,31 +675,9 @@ app.layout = dbc.Container([
             # Arrange the two graphs side by side with chart type selection
             dbc.Row([
                 dbc.Col([
-                    html.Label("Chart Type:"),
-                    dcc.RadioItems(
-                        id='chart-type-isced',
-                        options=[
-                            {'label': 'Bar', 'value': 'bar'},
-                            {'label': 'Line', 'value': 'line'},
-                            {'label': 'Pie', 'value': 'pie'}
-                        ],
-                        value='bar',
-                        labelStyle={'display': 'inline-block', 'margin-right': '10px'}
-                    ),
                     dcc.Graph(id='graph-isced'),  # Graph for ISCED level of education
                 ], width=6),
                 dbc.Col([
-                    html.Label("Chart Type:"),
-                    dcc.RadioItems(
-                        id='chart-type-province',
-                        options=[
-                            {'label': 'Bar', 'value': 'bar'},
-                            {'label': 'Line', 'value': 'line'},
-                            {'label': 'Pie', 'value': 'pie'}
-                        ],
-                        value='bar',
-                        labelStyle={'display': 'inline-block', 'margin-right': '10px'}
-                    ),
                     dcc.Graph(id='graph-province'),  # Graph for provinces
                 ], width=6)
             ]),
@@ -1066,8 +948,6 @@ def handle_map_movement(viewport):
     Input('isced-filter', 'value'),
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
-    Input('chart-type-isced', 'value'),
-    Input('chart-type-province', 'value'),
     Input('selected-isced', 'data'),
     Input('selected-province', 'data'),
     Input('selected-cma', 'data'),
@@ -1101,8 +981,7 @@ def update_visualizations(*args):
     try:
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, 
-         chart_type_isced, chart_type_province, selected_isced, 
-         selected_province, selected_feature) = args[:-1]
+         selected_isced, selected_province, selected_feature) = args[:-1]
         
         ctx = callback_context
         if not ctx.triggered:
@@ -1186,12 +1065,11 @@ def update_visualizations(*args):
         
         geojson_data = {'type': 'FeatureCollection', 'features': features}
         
-        # Create charts with selections
+        # Create charts with selections (simplified without chart type parameter)
         fig_isced = create_chart(
             isced_grads, 
             'ISCED_level_of_education', 
             'graduates',
-            chart_type_isced, 
             'ISCED Level of Education', 
             colorscale, 
             selected_isced
@@ -1201,7 +1079,6 @@ def update_visualizations(*args):
             province_grads, 
             'Province_Territory', 
             'graduates',
-            chart_type_province, 
             'Province/Territory', 
             colorscale, 
             selected_province
@@ -1273,3 +1150,4 @@ def reset_filters(n_clicks):
 
 if __name__ == '__main__':
     app.run_server(debug=False)
+
