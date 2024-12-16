@@ -1,3 +1,5 @@
+import tempfile
+import os
 from dash import Dash, html, dcc, callback, Output, Input, State, callback_context, dash_table, Patch, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -14,10 +16,76 @@ import numpy as np
 from functools import lru_cache
 from diskcache import Cache
 import orjson
+import logging
+import atexit
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Azure App Service cache configuration
+class AzureCache:
+    def __init__(self):
+        self.CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
+        self.DEFAULT_SIZE = 512e6  # 512MB default
+        self.FALLBACK_SIZE = 128e6  # 128MB fallback
+        self.cache = None
+        self.initialize_cache()
+
+    def initialize_cache(self):
+        """Initialize cache with fallback options"""
+        try:
+            os.makedirs(self.CACHE_DIR, exist_ok=True)
+            self.cache = Cache(self.CACHE_DIR, size_limit=self.DEFAULT_SIZE)
+            logger.info(f"Cache initialized at {self.CACHE_DIR} with size {self.DEFAULT_SIZE/1e6}MB")
+        except Exception as e:
+            logger.warning(f"Primary cache initialization failed: {e}")
+            try:
+                self.cache = Cache(self.CACHE_DIR, size_limit=self.FALLBACK_SIZE)
+                logger.info(f"Fallback cache initialized with size {self.FALLBACK_SIZE/1e6}MB")
+            except Exception as e:
+                logger.error(f"Cache initialization completely failed: {e}")
+                self.cache = None
+
+    def clear_cache(self):
+        """Clear cache on shutdown"""
+        if self.cache:
+            try:
+                self.cache.clear()
+                logger.info("Cache cleared successfully")
+            except Exception as e:
+                logger.error(f"Error clearing cache: {e}")
+
+    def get_cache(self):
+        """Get cache instance with initialization check"""
+        if not self.cache:
+            self.initialize_cache()
+        return self.cache
+
+# Initialize Azure-specific cache
+azure_cache = AzureCache()
+cache = azure_cache.get_cache()
+
+# Register cleanup
+atexit.register(azure_cache.clear_cache)
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
+
+# Modified cache decorator with retry logic
+def azure_cache_decorator(func):
+    """Decorator for Azure-friendly caching with retry logic"""
+    def wrapper(*args, **kwargs):
+        if not cache:
+            return func(*args, **kwargs)
+        
+        try:
+            return cache.memoize(expire=3600)(func)(*args, **kwargs)
+        except Exception as e:
+            logger.warning(f"Cache operation failed for {func.__name__}: {e}")
+            return func(*args, **kwargs)
+    return wrapper
 
 # Enhanced caching configuration
 cache = Cache('/tmp/dash_cache', size_limit=5e9)  # Increased to 5GB cache limit
@@ -240,6 +308,7 @@ class CallbackContextManager:
         return bool(self.ctx.triggered)
 
 @functools.lru_cache(maxsize=64)  # Increased cache size
+@azure_cache_decorator
 def load_spatial_data():
     """
     Loads geospatial data for provinces and combined CMA/CA polygons from parquet files.
@@ -306,6 +375,7 @@ def filter_data(data, filters):
     return data[mask]
 
 @cache.memoize(expire=3600)  # Cache for 1 hour
+@azure_cache_decorator
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions):
     """
@@ -402,6 +472,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     }
 
 @cache.memoize(expire=300)  # Cache for 5 minutes
+@azure_cache_decorator
 def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     """Creates a horizontal bar chart."""
     if dataframe.empty:
@@ -902,6 +973,26 @@ def handle_map_movement(viewport):
     
     return no_update
 
+# Add cache monitoring
+def monitor_cache_usage():
+    """Monitor cache size and usage"""
+    if not cache:
+        return
+        
+    try:
+        total_size = sum(os.path.getsize(os.path.join(cache.directory, f))
+                        for f in os.listdir(cache.directory)
+                        if os.path.isfile(os.path.join(cache.directory, f)))
+        
+        usage_mb = total_size / 1e6
+        logger.info(f"Current cache usage: {usage_mb:.2f}MB")
+        
+        if usage_mb > (cache.size_limit / 1e6) * 0.9:  # 90% threshold
+            logger.warning("Cache usage approaching limit")
+            cache.expire()
+    except Exception as e:
+        logger.error(f"Error monitoring cache: {e}")
+
 @app.callback(
     Output('cma-geojson', 'data'),
     Output('graph-isced', 'figure'),
@@ -1053,6 +1144,9 @@ def update_visualizations(*args):
         table_data = cma_grads.sort_values('graduates', ascending=False).to_dict('records')
         table_columns = [{"name": i, "id": i} for i in cma_grads.columns]
         
+        # Monitor cache at the start of major updates
+        monitor_cache_usage()
+        
         return (
             geojson_data,
             fig_isced,
@@ -1063,7 +1157,7 @@ def update_visualizations(*args):
         )
         
     except Exception as e:
-        print(f"Error in update_visualizations: {str(e)}")
+        logger.error(f"Error in update_visualizations: {str(e)}")
         return create_empty_response()
 
 @app.callback(
