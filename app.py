@@ -13,12 +13,14 @@ import time
 import numpy as np
 from functools import lru_cache
 from diskcache import Cache
+import orjson
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-cache = Cache('/tmp/dash_cache')
+# Enhanced caching configuration
+cache = Cache('/tmp/dash_cache', size_limit=3e9)  # 3GB cache limit
 
 class MapState:
     """
@@ -237,7 +239,7 @@ class CallbackContextManager:
         """
         return bool(self.ctx.triggered)
 
-@functools.lru_cache(maxsize=1)
+@functools.lru_cache(maxsize=64)  # Increased cache size
 def load_spatial_data():
     """
     Loads geospatial data for provinces and combined CMA/CA polygons from parquet files.
@@ -309,7 +311,7 @@ def filter_data(data, filters):
         return data.iloc[0:0]
     return filtered
 
-@functools.lru_cache(maxsize=128)
+@cache.memoize(expire=3600)  # Cache for 1 hour
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions):
     """
@@ -348,12 +350,19 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     if filtered_data.empty:
         return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Aggregations with observed=True to suppress FutureWarning
-    cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum().reset_index(name='graduates')
-    isced_grads = filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum().reset_index(name='graduates')
-    province_grads = filtered_data.groupby("Province_Territory", observed=True)['value'].sum().reset_index(name='graduates')
+    # Vectorized operations for aggregations
+    aggregations = {
+        'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
+        'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
+        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
+    }
 
-    return filtered_data.reset_index(), cma_grads, isced_grads, province_grads
+    return (
+        filtered_data.reset_index(),
+        aggregations['cma'].reset_index(name='graduates'),
+        aggregations['isced'].reset_index(name='graduates'),
+        aggregations['province'].reset_index(name='graduates')
+    )
 
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
     """
@@ -374,8 +383,9 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         dict: A dictionary representing a GeoJSON feature with 'properties' and 'style'
               attributes suitable for rendering on a Leaflet map via Dash Leaflet.
     """
-    graduates = row['graduates']
+    graduates = float(row['graduates'])  # Convert to float for faster comparisons
     dguid = str(row['DGUID'])
+    is_selected = selected_feature and dguid == selected_feature
     
     if max_graduates > min_graduates:
         normalized_value = (graduates - min_graduates) / (max_graduates - min_graduates)
@@ -383,8 +393,6 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         color = colorscale[color_index] if graduates > 0 else 'lightgray'
     else:
         color = colorscale[0] if graduates > 0 else 'lightgray'
-    
-    is_selected = selected_feature and dguid == selected_feature
     
     return {
         'graduates': int(graduates),
@@ -399,6 +407,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'tooltip': f"CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates)}"
     }
 
+@cache.memoize(expire=300)  # Cache for 5 minutes
 def create_chart(dataframe, x_column, y_column, chart_type, x_label, colorscale, selected_value):
     """
     Creates a Plotly figure corresponding to the specified chart type (bar, line, or pie).
