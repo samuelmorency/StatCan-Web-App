@@ -20,7 +20,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 # Enhanced caching configuration
-cache = Cache('/tmp/dash_cache', size_limit=3e9)  # 3GB cache limit
+cache = Cache('/tmp/dash_cache', size_limit=5e9)  # Increased to 5GB cache limit
 
 class MapState:
     """
@@ -271,6 +271,7 @@ def load_and_process_educational_data():
     categorical_cols = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
     for col in categorical_cols:
         data[col] = data[col].astype('category')
+    data['value'] = data['value'].astype('float32')
 
     # Set a multi-index for direct indexing
     data = data.set_index(["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]).sort_index()
@@ -296,20 +297,13 @@ def filter_data(data, filters):
         pandas.DataFrame: The filtered DataFrame containing only rows that meet
                           all specified conditions.
     """
-    index_levels = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
-    selection = []
-    for lvl in index_levels:
-        if len(filters[lvl]) == 0:
-            selection.append(slice(None))
-        else:
-            selection.append(list(filters[lvl]))
-
-    try:
-        filtered = data.loc[tuple(selection)]
-    except KeyError:
-        # If no rows match, return empty DataFrame
-        return data.iloc[0:0]
-    return filtered
+    mask = pd.Series(True, index=data.index)
+    
+    for col, values in filters.items():
+        if values:
+            mask &= data.index.get_level_values(col).isin(values)
+    
+    return data[mask]
 
 @cache.memoize(expire=3600)  # Cache for 1 hour
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
@@ -827,17 +821,17 @@ def update_map_style(geojson_data, colorscale, selected_feature=None):
     if not geojson_data or 'features' not in geojson_data:
         return patched_geojson
         
-    for i, feature in enumerate(geojson_data['features']):
-        dguid = feature['properties']['DGUID']
-        is_selected = selected_feature and dguid == selected_feature
-        
-        style_updates = {
-            'fillColor': 'yellow' if is_selected else feature['properties']['style']['fillColor'],
-            'color': 'black' if is_selected else 'gray',
-            'weight': 2 if is_selected else 0.5,
-        }
-        
-        patched_geojson['features'][i]['properties']['style'].update(style_updates)
+    feature_dguids = [f['properties']['DGUID'] for f in geojson_data['features']]
+    is_selected = [selected_feature and dguid == selected_feature for dguid in feature_dguids]
+    
+    for i, selected in enumerate(is_selected):
+        if selected or geojson_data['features'][i]['properties']['style'].get('weight') != 0.5:
+            style_updates = {
+                'fillColor': 'yellow' if selected else geojson_data['features'][i]['properties']['style']['fillColor'],
+                'color': 'black' if selected else 'gray',
+                'weight': 2 if selected else 0.5,
+            }
+            patched_geojson['features'][i]['properties']['style'].update(style_updates)
     
     return patched_geojson
 
