@@ -105,7 +105,7 @@ class MapState:
 # Initialize map state
 map_state = MapState()
 
-@lru_cache(maxsize=32)
+@lru_cache(maxsize=256)  # Increase cache size
 def calculate_optimal_viewport(bounds, padding_factor=0.1):
     """
     Computes an optimal viewport given geographic bounds. If the provided bounds
@@ -295,20 +295,11 @@ def filter_data(data, filters):
         pandas.DataFrame: The filtered DataFrame containing only rows that meet
                           all specified conditions.
     """
-    index_levels = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
-    selection = []
-    for lvl in index_levels:
-        if len(filters[lvl]) == 0:
-            selection.append(slice(None))
-        else:
-            selection.append(list(filters[lvl]))
-
-    try:
-        filtered = data.loc[tuple(selection)]
-    except KeyError:
-        # If no rows match, return empty DataFrame
-        return data.iloc[0:0]
-    return filtered
+    mask = pd.Series(True, index=data.index)
+    for col, values in filters.items():
+        if values:
+            mask &= data.index.get_level_values(col).isin(values)
+    return data[mask]
 
 @functools.lru_cache(maxsize=128)
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 

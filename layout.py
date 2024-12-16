@@ -3,6 +3,25 @@ import dash_leaflet as dl
 import dash_bootstrap_components as dbc
 from dash_extensions.javascript import assign
 
+# Constants for styling
+FILTER_STYLES = {
+    'dropdown': {"margin-bottom": "15px"},
+    'button': {"margin-top": "15px"},
+    'map': {'width': '100%', 'height': '600px'}
+}
+
+# Component factory functions
+def create_dropdown(id, options, placeholder):
+    return dcc.Dropdown(
+        id=id,
+        options=options,
+        value=[],
+        multi=True,
+        placeholder=placeholder,
+        searchable=True,
+        style=FILTER_STYLES['dropdown']
+    )
+
 def create_filters(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
     stem_bhase_filter = [
         #html.H5("Filters"),
@@ -68,15 +87,7 @@ def create_filters(stem_bhase_options_full, year_options_full, prov_options_full
     
     institution_filter = [
         html.Label("Institution:"),
-        dcc.Dropdown(
-            id='institution-filter',
-            options=institution_options_full,
-            value=[],
-            multi=True,
-            placeholder="All Institutions",
-            searchable=True,
-            #style={"margin-bottom": "15px"}
-        ),
+        create_dropdown('institution-filter', institution_options_full, "All Institutions")
     ]
 
     filters = [
