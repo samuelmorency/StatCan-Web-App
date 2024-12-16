@@ -1,20 +1,11 @@
-# Core visualization dependencies
 dash==2.18.2
 dash-bootstrap-components==1.6.0
-dash-leaflet==1.0.15
-dash-extensions==1.0.19
-plotly==5.24.1
-
-# Data processing
 pandas==2.2.3
 geopandas==1.0.1
-numpy==1.24.3  # More stable version
-pyarrow==18.1.0
-
-# Utilities
+dash-leaflet==1.0.15
 colorlover==0.3.0
+dash-extensions==1.0.19
+plotly==5.24.1
+numpy==2.1.3
 diskcache==5.6.3
-
-# Additional requirements
-typing-extensions>=4.7.1
-werkzeug>=2.3.7
+pyarrow==18.1.0
