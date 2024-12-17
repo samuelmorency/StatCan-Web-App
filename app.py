@@ -18,7 +18,7 @@ from diskcache import Cache
 import orjson
 import logging
 import atexit
-import brand
+import brand_colours as bc
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -467,8 +467,8 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'DGUID': dguid,
         'CMA_CA': row['CMA_CA'],
         'style': {
-            'fillColor': brand.MAIN_RED if is_selected else color,
-            'color': brand.IIC_BLACK if is_selected else brand.GREY,
+            'fillColor': bc.MAIN_RED if is_selected else color,
+            'color': bc.IIC_BLACK if is_selected else bc.GREY,
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
@@ -497,7 +497,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     )
     
     if selected_value:
-        colors = [brand.LIGHT_GREY if x != selected_value else brand.MAIN_RED for x in sorted_data[x_column]]
+        colors = [bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]]
         fig.data[0].marker.color = colors
         fig.update_coloraxes(showscale=False)
     
@@ -509,7 +509,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         clickmode='event+select',
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font={'color': brand.IIC_BLACK}
+        font={'color': bc.IIC_BLACK}
     )
     
     return fig
@@ -669,7 +669,7 @@ app.layout = dbc.Container([
                         n_clicks=0, 
                         style={
                             "margin-top": "15px",
-                            "background-color": brand.MAIN_RED,
+                            "background-color": bc.MAIN_RED,
                             "color": "white",
                             "border": "none",
                             "padding": "10px 20px",
@@ -682,8 +682,8 @@ app.layout = dbc.Container([
                         n_clicks=0, 
                         style={
                             "margin-top": "15px",
-                            "background-color": brand.LIGHT_GREY,
-                            "color": brand.IIC_BLACK,
+                            "background-color": bc.LIGHT_GREY,
+                            "color": bc.IIC_BLACK,
                             "border": "none",
                             "padding": "10px 20px",
                             "border-radius": "5px"
@@ -795,12 +795,12 @@ app.layout = dbc.Container([
                 style_table={'height': '400px', 'overflowY': 'auto'},
                 style_cell={
                     'textAlign': 'left',
-                    'color': brand.IIC_BLACK,
+                    'color': bc.IIC_BLACK,
                     'backgroundColor': 'white'
                 },
                 style_header={
-                    'backgroundColor': brand.LIGHT_BLUE,
-                    'color': brand.IIC_BLACK,
+                    'backgroundColor': bc.LIGHT_BLUE,
+                    'color': bc.IIC_BLACK,
                     'fontWeight': 'bold'
                 },
                 page_action='none',  # Disable pagination
@@ -1011,7 +1011,7 @@ def update_hover_style(hover_feature, current_geojson):
         if feature_id == hover_id:
             patched_geojson['features'][i]['properties']['style'].update({
                 'weight': 3,
-                'color': brand.DARK_BLUE,
+                'color': bc.DARK_BLUE,
                 'fillOpacity': 0.9
             })
         elif feature['properties']['style'].get('weight') == 3:
@@ -1201,7 +1201,7 @@ def update_visualizations(*args):
                     'CMA_CA': row['CMA_CA'],
                     'style': {
                         'fillColor': color if row['graduates'] > 0 else 'lightgray',
-                        'color': brand.IIC_BLACK if row['DGUID'] == selected_feature else brand.GREY,
+                        'color': bc.IIC_BLACK if row['DGUID'] == selected_feature else bc.GREY,
                         'weight': 2 if row['DGUID'] == selected_feature else 0.5,
                         'fillOpacity': 0.8
                     },
