@@ -758,7 +758,10 @@ app.layout = dbc.Container([
                         center=[56, -96],
                         zoom=4,
                         children=[
-                            dl.TileLayer(),
+                            dl.TileLayer(
+                                url='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+                                attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'
+                            ),
                             dl.GeoJSON(
                                 id='cma-geojson',
                                 data=None,
