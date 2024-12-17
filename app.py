@@ -483,10 +483,6 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         return {}
     
     sorted_data = dataframe.sort_values(y_column, ascending=True)
-    stats = {
-        'vmin': sorted_data[y_column].quantile(0.01),
-        'vmax': sorted_data[y_column].max() or 0
-    }
     
     fig = px.bar(
         sorted_data,
@@ -496,8 +492,8 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         title=f'Number of Graduates by {x_label}',
         labels={y_column: 'Number of Graduates', x_column: x_label},
         color=y_column,
-        color_continuous_scale=px.colors.sequential.Reds,  # Use built-in Reds scale
-        range_color=[stats['vmin'], stats['vmax']]
+        color_continuous_scale='Reds',  # Simplified color scale definition
+        range_color=[sorted_data[y_column].min(), sorted_data[y_column].max()]
     )
     
     if selected_value:
