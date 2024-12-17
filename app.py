@@ -70,7 +70,7 @@ cache = azure_cache.get_cache()
 atexit.register(azure_cache.clear_cache)
 
 # Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 
 # Modified cache decorator with retry logic
@@ -643,214 +643,195 @@ institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(da
 
 # Create the app layout
 app.layout = dbc.Container([
-    html.H1("Interactive Choropleth Map of STEM/BHASE Graduates in Canada", className="my-4"),
+    dbc.Row([
+        dbc.Col(
+            dbc.Card([
+                dbc.CardBody([
+                    html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
+                    html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
+                ])
+            ], className="mb-4 border-0"),
+        width=12)
+    ]),
     dbc.Row([
         dbc.Col([
-            html.H5("Filters"),
-            dbc.Button(
-                html.I(className="fas fa-info-circle"),
-                id="filter-info",
-                color="link",
-                className="p-0 mb-2"
-            ),
-            dcc.Tooltip(
-                id="filter-tooltip",
-                children="Use these filters to narrow down the data displayed on the map and charts.",
-                style={
-                    'backgroundColor': 'white',
-                    'color': 'black',
-                    'border': '1px solid #ccc',
-                    'padding': '10px',
-                    'fontSize': '12px'
-                }
-            ),
-            html.Label([
-                "STEM/BHASE ",
-                dbc.Button(
-                    html.I(className="fas fa-info-circle"),
-                    id="stem-info",
-                    color="link",
-                    size="sm",
-                    className="p-0"
-                ),
-            ]),
-            dcc.Tooltip(
-                id="stem-tooltip",
-                children=[
-                    html.P("STEM: Science, Technology, Engineering, Mathematics"),
-                    html.P("BHASE: Business, Humanities, Arts, Social Science, Education")
-                ],
-                style={
-                    'backgroundColor': 'white',
-                    'color': 'black',
-                    'border': '1px solid #ccc',
-                    'padding': '10px',
-                    'fontSize': '12px'
-                }
-            ),
-            html.Label("STEM/BHASE:"),
-            dcc.Checklist(
-                id='stem-bhase-filter',
-                options=stem_bhase_options_full,
-                value=[option['value'] for option in stem_bhase_options_full],
-                inputStyle={"margin-right": "5px", "margin-left": "20px"},
-                style={"margin-bottom": "15px"}
-            ),
-            html.Label("Academic Year:"),
-            dcc.Checklist(
-                id='year-filter',
-                options=year_options_full,
-                value=[option['value'] for option in year_options_full],
-                inputStyle={"margin-right": "5px", "margin-left": "20px"},
-                style={"margin-bottom": "15px"}
-            ),
-            html.Label("Province:"),
-            dcc.Dropdown(
-                id='prov-filter',
-                options=prov_options_full,
-                value=[],
-                multi=True,
-                placeholder="All Provinces",
-                searchable=True,
-                style={"margin-bottom": "15px"}
-            ),
-            html.Label("ISCED Level:"),
-            dcc.Dropdown(
-                id='isced-filter',
-                options=isced_options_full,
-                value=[],
-                multi=True,
-                placeholder="All Levels",
-                searchable=True,
-                style={"margin-bottom": "15px"}
-            ),
-            html.Label("Credential Type:"),
-            dcc.Dropdown(
-                id='credential-filter',
-                options=credential_options_full,
-                value=[],
-                multi=True,
-                placeholder="All Credential Types",
-                searchable=True,
-                style={"margin-bottom": "15px"}
-            ),
-            html.Label("Institution:"),
-            dcc.Dropdown(
-                id='institution-filter',
-                options=institution_options_full,
-                value=[],
-                multi=True,
-                placeholder="All Institutions",
-                searchable=True,
-                style={"margin-bottom": "15px"}
-            ),
-            html.Button('Reset Filters', 
-                id='reset-filters', 
-                n_clicks=0, 
-                style={
-                    "margin-top": "15px",
-                    "background-color": MAIN_BLUE,
-                    "color": "white",
-                    "border": "none",
-                    "padding": "10px 20px",
-                    "border-radius": "5px",
-                    "margin-right": "10px"
-                }
-            ),
-            html.Button('Clear Selection', 
-                id='clear-selection', 
-                n_clicks=0, 
-                style={
-                    "margin-top": "15px",
-                    "background-color": LIGHT_GREY,
-                    "color": IIC_BLACK,
-                    "border": "none",
-                    "padding": "10px 20px",
-                    "border-radius": "5px"
-                }
-            ),
-            # Add dcc.Store components to store selected data for cross-filtering
-            dcc.Store(id='selected-isced', data=None),
-            dcc.Store(id='selected-province', data=None),
-            dcc.Store(id='selected-cma', data=None),
-            # Remove download buttons and components
-        ], width=3, style={
-            "background-color": LIGHT_GREY,
-            "padding": "20px",
-            "border-radius": "5px"
-        }),
+            dbc.Card([
+                dbc.CardHeader("Filters"),
+                dbc.CardBody([
+                    html.Label("STEM/BHASE:"),
+                    dcc.Checklist(
+                        id='stem-bhase-filter',
+                        options=stem_bhase_options_full,
+                        value=[option['value'] for option in stem_bhase_options_full],
+                        inputStyle={"margin-right": "5px", "margin-left": "20px"},
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Label("Academic Year:"),
+                    dcc.Checklist(
+                        id='year-filter',
+                        options=year_options_full,
+                        value=[option['value'] for option in year_options_full],
+                        inputStyle={"margin-right": "5px", "margin-left": "20px"},
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Label("Province:"),
+                    dcc.Dropdown(
+                        id='prov-filter',
+                        options=prov_options_full,
+                        value=[],
+                        multi=True,
+                        placeholder="All Provinces",
+                        searchable=True,
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Label("ISCED Level:"),
+                    dcc.Dropdown(
+                        id='isced-filter',
+                        options=isced_options_full,
+                        value=[],
+                        multi=True,
+                        placeholder="All Levels",
+                        searchable=True,
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Label("Credential Type:"),
+                    dcc.Dropdown(
+                        id='credential-filter',
+                        options=credential_options_full,
+                        value=[],
+                        multi=True,
+                        placeholder="All Credential Types",
+                        searchable=True,
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Label("Institution:"),
+                    dcc.Dropdown(
+                        id='institution-filter',
+                        options=institution_options_full,
+                        value=[],
+                        multi=True,
+                        placeholder="All Institutions",
+                        searchable=True,
+                        style={"margin-bottom": "15px"}
+                    ),
+                    html.Button('Reset Filters', 
+                        id='reset-filters', 
+                        n_clicks=0, 
+                        style={
+                            "margin-top": "15px",
+                            "background-color": MAIN_BLUE,
+                            "color": "white",
+                            "border": "none",
+                            "padding": "10px 20px",
+                            "border-radius": "5px",
+                            "margin-right": "10px"
+                        }
+                    ),
+                    html.Button('Clear Selection', 
+                        id='clear-selection', 
+                        n_clicks=0, 
+                        style={
+                            "margin-top": "15px",
+                            "background-color": LIGHT_GREY,
+                            "color": IIC_BLACK,
+                            "border": "none",
+                            "padding": "10px 20px",
+                            "border-radius": "5px"
+                        }
+                    ),
+                    # Add dcc.Store components to store selected data for cross-filtering
+                    dcc.Store(id='selected-isced', data=None),
+                    dcc.Store(id='selected-province', data=None),
+                    dcc.Store(id='selected-cma', data=None),
+                ])
+                
+            ], className="mb-4 h-100"),
+        ], width=3),
 
         dbc.Col([
             # Remove Spinner from map, keep direct map component
-            html.Div([
-                dl.Map(
-                    id='map',
-                    center=[56, -96],
-                    zoom=4,
-                    children=[
-                        dl.TileLayer(),
-                        dl.GeoJSON(
-                            id='cma-geojson',
-                            data=None,
-                            style=assign("""
-                            function(feature) {
-                                return feature.properties.style;
-                            }
-                            """),
-                            zoomToBounds=True,
-                            hoverStyle=dict(
-                                weight=2, color='black', dashArray='',
-                                fillOpacity=0.7
-                            ),
-                            onEachFeature=assign("""
-                            function(feature, layer) {
-                                if (feature.properties && feature.properties.tooltip) {
-                                    layer.bindTooltip(feature.properties.tooltip);
+            dbc.Card([
+                dbc.CardHeader("Graduates by CMA/CA"),
+                dbc.CardBody([
+                    dl.Map(
+                        id='map',
+                        center=[56, -96],
+                        zoom=4,
+                        children=[
+                            dl.TileLayer(),
+                            dl.GeoJSON(
+                                id='cma-geojson',
+                                data=None,
+                                style=assign("""
+                                function(feature) {
+                                    return feature.properties.style;
                                 }
-                            }
-                            """),
-                            options=dict(interactive=True),
-                            eventHandlers=dict(
-                                click=assign("""
-                                function(e, ctx) {
-                                    e.originalEvent._stopped = true;
-                                    const clickData = {
-                                        feature: e.sourceTarget.feature.properties.DGUID,
-                                        points: [{
-                                            featureId: e.sourceTarget.feature.properties.DGUID
-                                        }]
-                                    };
-                                    ctx.setProps({ 
-                                        clickData: clickData,
-                                        clickedFeature: null  // Reset the clicked feature
-                                    });
+                                """),
+                                zoomToBounds=True,
+                                hoverStyle=dict(
+                                    weight=2, color='black', dashArray='',
+                                    fillOpacity=0.7
+                                ),
+                                onEachFeature=assign("""
+                                function(feature, layer) {
+                                    if (feature.properties && feature.properties.tooltip) {
+                                        layer.bindTooltip(feature.properties.tooltip);
+                                    }
                                 }
-                                """)
+                                """),
+                                options=dict(interactive=True),
+                                eventHandlers=dict(
+                                    click=assign("""
+                                    function(e, ctx) {
+                                        e.originalEvent._stopped = true;
+                                        const clickData = {
+                                            feature: e.sourceTarget.feature.properties.DGUID,
+                                            points: [{
+                                                featureId: e.sourceTarget.feature.properties.DGUID
+                                            }]
+                                        };
+                                        ctx.setProps({ 
+                                            clickData: clickData,
+                                            clickedFeature: null  // Reset the clicked feature
+                                        });
+                                    }
+                                    """)
+                                ),
                             ),
-                        ),
-                    ],
-                    style={'width': '100%', 'height': '600px'},
-                ),
-            ], style={"height": "600px"}),
+                        ],
+                        style={'width': '100%', 'height': '600px'},
+                    ),
+                ])
+            ], className="mb-4"),
 
             # Keep existing spinners for charts
             # Arrange the two graphs side by side with chart type selection
             dbc.Row([
                 dbc.Col([
-                    dbc.Spinner(
-                        dcc.Graph(id='graph-isced'),
-                        color="primary",
-                        type="border",
-                    ),
+                    dbc.Card([
+                        dbc.CardHeader("ISCED Level Distribution"),
+                        dbc.CardBody([
+                            dbc.Spinner(
+                                dcc.Graph(id='graph-isced'),
+                                color="primary",
+                                type="border",
+                            ),
+                        ])
+                    ])
                 ], width=6),
                 dbc.Col([
-                    dbc.Spinner(
-                        dcc.Graph(id='graph-province'),
-                        color="primary",
-                        type="border",
-                    ),
+                    dbc.Card([
+                        dbc.CardHeader("Provincial Distribution"),
+                        dbc.CardBody([
+                            dbc.Spinner(
+                                dcc.Graph(id='graph-province'),
+                                color="primary",
+                                type="border",
+                            ),
+                        ])
+                    ])
                 ], width=6)
-            ]),
+            ], className="mb-4"),
 
             # Add the scrollable table at the bottom
             html.H3("Number of Graduates by CMA/CA"),
