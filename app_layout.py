@@ -9,14 +9,17 @@ checklist_format = {
     "style": {"margin-bottom": "15px"}
 }
 
-def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
-    stem_bhase_args = {
-        "id": "stem-bhase-filter",
-        "options": stem_bhase_options_full,
-        "value": [option['value'] for option in stem_bhase_options_full],
-        **checklist_format
+def args(id, options, format):
+    return {
+        "id": id,
+        "options": options,
+        "value": [option['value'] for option in options],
+        **format
     }
 
+def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
+    stem_bhase_args = args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
+    year_args = args("year-filter", year_options_full, checklist_format)
     # Create the app layout
     app_layout = dbc.Container([
         dbc.Row([
@@ -37,13 +40,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         html.Label("STEM/BHASE:"),
                         dcc.Checklist(**stem_bhase_args),
                         html.Label("Academic Year:"),
-                        dcc.Checklist(
-                            id='year-filter',
-                            options=year_options_full,
-                            value=[option['value'] for option in year_options_full],
-                            inputStyle={"margin-right": "5px", "margin-left": "20px"},
-                            style={"margin-bottom": "15px"}
-                        ),
+                        dcc.Checklist(**year_args),
                         html.Label("Province:"),
                         dcc.Dropdown(
                             id='prov-filter',
