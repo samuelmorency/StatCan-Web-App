@@ -27,41 +27,49 @@ logger = logging.getLogger(__name__)
 # Azure App Service cache configuration
 class AzureCache:
     def __init__(self):
-        self.CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
-        self.DEFAULT_SIZE = 512e6  # 512MB default
-        self.FALLBACK_SIZE = 128e6  # 128MB fallback
-        self.cache = None
+        self._CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
+        self._DEFAULT_SIZE = 512e6  # 512MB default
+        self._FALLBACK_SIZE = 128e6  # 128MB fallback
+        self._cache = None
         self.initialize_cache()
+
+    @property
+    def cache_dir(self):
+        return self._CACHE_DIR
+        
+    @property
+    def cache(self):
+        return self._cache
 
     def initialize_cache(self):
         """Initialize cache with fallback options"""
         try:
-            os.makedirs(self.CACHE_DIR, exist_ok=True)
-            self.cache = Cache(self.CACHE_DIR, size_limit=self.DEFAULT_SIZE)
-            logger.info(f"Cache initialized at {self.CACHE_DIR} with size {self.DEFAULT_SIZE/1e6}MB")
+            os.makedirs(self._CACHE_DIR, exist_ok=True)
+            self._cache = Cache(self._CACHE_DIR, size_limit=self._DEFAULT_SIZE)
+            logger.info(f"Cache initialized at {self._CACHE_DIR} with size {self._DEFAULT_SIZE/1e6}MB")
         except Exception as e:
             logger.warning(f"Primary cache initialization failed: {e}")
             try:
-                self.cache = Cache(self.CACHE_DIR, size_limit=self.FALLBACK_SIZE)
-                logger.info(f"Fallback cache initialized with size {self.FALLBACK_SIZE/1e6}MB")
+                self._cache = Cache(self._CACHE_DIR, size_limit=self._FALLBACK_SIZE)
+                logger.info(f"Fallback cache initialized with size {self._FALLBACK_SIZE/1e6}MB")
             except Exception as e:
                 logger.error(f"Cache initialization completely failed: {e}")
-                self.cache = None
+                self._cache = None
 
     def clear_cache(self):
         """Clear cache on shutdown"""
-        if self.cache:
+        if self._cache:
             try:
-                self.cache.clear()
+                self._cache.clear()
                 logger.info("Cache cleared successfully")
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
     def get_cache(self):
         """Get cache instance with initialization check"""
-        if not self.cache:
+        if not self._cache:
             self.initialize_cache()
-        return self.cache
+        return self._cache
 
 # Initialize Azure-specific cache
 azure_cache = AzureCache()
@@ -103,14 +111,26 @@ class MapState:
         zoom level, selected feature, or hover feature. The viewport lock is initially
         false and the last update time is zero.
         """
-        self.current_bounds = None
-        self.current_zoom = None
-        self.selected_feature = None
-        self.hover_feature = None
-        self.color_scale = None
-        self.last_update_time = 0
-        self.viewport_locked = False
+        self._bounds = None
+        self._zoom = None
+        self._selected_feature = None
+        self._hover_feature = None
+        self._color_scale = None
+        self._last_update_time = 0
+        self._viewport_locked = False
         
+    @property
+    def current_bounds(self):
+        return self._bounds
+        
+    @property
+    def current_zoom(self):
+        return self._zoom
+        
+    @property
+    def is_viewport_locked(self):
+        return self._viewport_locked
+    
     def should_update_viewport(self, new_bounds, force=False):
         """
         Determines whether the map viewport should be updated based on the current
@@ -130,15 +150,15 @@ class MapState:
         Returns:
             bool: True if the viewport should be updated, False otherwise.
         """
-        if not self.current_bounds or force:
+        if not self._bounds or force:
             return True
             
         # Reset viewport lock periodically
         current_time = time.time()
-        if current_time - self.last_update_time > 2.0:  # Reset lock after 2 seconds
-            self.viewport_locked = False
+        if current_time - self._last_update_time > 2.0:  # Reset lock after 2 seconds
+            self._viewport_locked = False
             
-        if self.viewport_locked and not force:
+        if self._viewport_locked and not force:
             return False
             
         return True
@@ -158,16 +178,16 @@ class MapState:
             color_scale (list or None): New color scale list or None to leave unchanged.
         """
         if bounds is not None:
-            self.current_bounds = bounds
-            self.last_update_time = time.time()
+            self._bounds = bounds
+            self._last_update_time = time.time()
         if zoom is not None:
-            self.current_zoom = zoom
+            self._zoom = zoom
         if selected is not None:
-            self.selected_feature = selected
+            self._selected_feature = selected
         if hover is not None:
-            self.hover_feature = hover
+            self._hover_feature = hover
         if color_scale is not None:
-            self.color_scale = color_scale
+            self._color_scale = color_scale
 
 # Initialize map state
 map_state = MapState()
@@ -291,19 +311,23 @@ class CallbackContextManager:
         Args:
             context (dash.callback_context): The current callback context provided by Dash.
         """
-        self.ctx = context
-        self.triggered = self.ctx.triggered[0] if self.ctx.triggered else None
-        self.triggered_id = self.triggered['prop_id'].split('.')[0] if self.triggered else None
+        self._ctx = context
+        self._triggered = self._ctx.triggered[0] if self._ctx.triggered else None
+        self._triggered_id = self._triggered['prop_id'].split('.')[0] if self._triggered else None
 
     @property
+    def triggered_id(self):
+        return self._triggered_id
+        
+    @property
     def is_triggered(self):
-        """
-        Indicates whether the callback was triggered by any input.
-
-        Returns:
-            bool: True if the callback was triggered, False otherwise.
-        """
-        return bool(self.ctx.triggered)
+        return bool(self._ctx.triggered)
+        
+    def get_input_value(self, input_id):
+        """Get the value of a specific input that triggered the callback"""
+        if self._triggered and self._triggered['prop_id'].startswith(input_id):
+            return self._triggered['value']
+        return None
 
 @functools.lru_cache(maxsize=64)  # Increased cache size
 @azure_cache_decorator
