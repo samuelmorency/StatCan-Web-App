@@ -9,6 +9,14 @@ checklist_format = {
     "style": {"margin-bottom": "15px"}
 }
 
+multi_dropdown_format = {
+    "value": [],
+    "multi": True,
+    "placeholder": "All",
+    "searchable": True,
+    "style": {"margin-bottom": "15px"}
+}
+
 def args(id, options, format):
     return {
         "id": id,
@@ -20,6 +28,10 @@ def args(id, options, format):
 def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
     stem_bhase_args = args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = args("year-filter", year_options_full, checklist_format)
+    prov_args = args("prov-filter", prov_options_full, multi_dropdown_format)
+    isced_args = args("isced-filter", isced_options_full, multi_dropdown_format)
+    credential_args = args("credential-filter", credential_options_full, multi_dropdown_format)
+    institution_args = args("institution-filter", institution_options_full, multi_dropdown_format)
     # Create the app layout
     app_layout = dbc.Container([
         dbc.Row([
@@ -42,45 +54,13 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         html.Label("Academic Year:"),
                         dcc.Checklist(**year_args),
                         html.Label("Province:"),
-                        dcc.Dropdown(
-                            id='prov-filter',
-                            options=prov_options_full,
-                            value=[],
-                            multi=True,
-                            placeholder="All Provinces",
-                            searchable=True,
-                            style={"margin-bottom": "15px"}
-                        ),
+                        dcc.Dropdown(**prov_args),
                         html.Label("ISCED Level:"),
-                        dcc.Dropdown(
-                            id='isced-filter',
-                            options=isced_options_full,
-                            value=[],
-                            multi=True,
-                            placeholder="All Levels",
-                            searchable=True,
-                            style={"margin-bottom": "15px"}
-                        ),
+                        dcc.Dropdown(**isced_args),
                         html.Label("Credential Type:"),
-                        dcc.Dropdown(
-                            id='credential-filter',
-                            options=credential_options_full,
-                            value=[],
-                            multi=True,
-                            placeholder="All Credential Types",
-                            searchable=True,
-                            style={"margin-bottom": "15px"}
-                        ),
+                        dcc.Dropdown(**credential_args),
                         html.Label("Institution:"),
-                        dcc.Dropdown(
-                            id='institution-filter',
-                            options=institution_options_full,
-                            value=[],
-                            multi=True,
-                            placeholder="All Institutions",
-                            searchable=True,
-                            style={"margin-bottom": "15px"}
-                        ),
+                        dcc.Dropdown(**institution_args),
                         html.Button('Reset Filters', 
                             id='reset-filters', 
                             n_clicks=0, 
