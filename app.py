@@ -408,7 +408,7 @@ def filter_data(data, filters):
 @cache.memoize(expire=3600)  # Cache for 1 hour
 @azure_cache_decorator
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
-                   selected_credentials, selected_institutions):
+                   selected_credentials, selected_institutions, selected_cmas):
     """
     Applies a series of filters to the pre-indexed global data. After filtering,
     aggregates are computed by summing over the relevant index levels rather than
@@ -422,6 +422,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
         selected_isced (tuple): A tuple of ISCED levels to include.
         selected_credentials (tuple): A tuple of credential types to include.
         selected_institutions (tuple): A tuple of institutions to include.
+        selected_cmas (tuple): A tuple of CMA/CA to include.
 
     Returns:
         tuple: A tuple containing:
@@ -437,7 +438,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
         'ISCED_level_of_education': set(selected_isced),
         'Credential_Type': set(selected_credentials),
         'Institution': set(selected_institutions),
-        'CMA_CA': set(),
+        'CMA_CA': set(selected_cmas),  # Add CMA filter
         'DGUID': set()
     }
 
@@ -620,11 +621,13 @@ def update_selected_value(click_data, n_clicks, stored_value, triggered_id, clea
 stem_bhase_options_full = [{'label': stem, 'value': stem} for stem in sorted(data.index.get_level_values('STEM/BHASE').unique())]
 year_options_full = [{'label': year, 'value': year} for year in sorted(data.index.get_level_values('year').unique())]
 prov_options_full = [{'label': prov, 'value': prov} for prov in sorted(data.index.get_level_values('Province_Territory').unique())]
+cma_options_full = [{'label': cma, 'value': cma} for cma in sorted(data.index.get_level_values('CMA_CA').unique())]
 isced_options_full = [{'label': level, 'value': level} for level in sorted(data.index.get_level_values('ISCED_level_of_education').unique())]
 credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential_Type').unique())]
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
-app.layout = create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full)
+
+app.layout = create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """
@@ -897,6 +900,7 @@ def monitor_cache_usage():
     Input('isced-filter', 'value'),
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
+    Input('cma-filter', 'value'),  # Add CMA filter input
     Input('selected-isced', 'data'),
     Input('selected-province', 'data'),
     Input('selected-cma', 'data'),
@@ -929,7 +933,7 @@ def update_visualizations(*args):
     """
     try:
         current_viewport = args[-1]
-        (stem_bhase, years, provs, isced, credentials, institutions, 
+        (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
          selected_isced, selected_province, selected_feature) = args[:-1]
         
         ctx = callback_context
@@ -945,7 +949,8 @@ def update_visualizations(*args):
             tuple(provs or []),
             tuple(isced or []),
             tuple(credentials or []),
-            tuple(institutions or [])
+            tuple(institutions or []),
+            tuple(cma_filter or [])  # Add CMA filter to preprocess_data
         )
         
         # Apply cross-filtering with vectorized operations
@@ -1072,6 +1077,7 @@ def update_visualizations(*args):
     Output('isced-filter', 'value'),
     Output('credential-filter', 'value'),
     Output('institution-filter', 'value'),
+    Output('cma-filter', 'value'),  # Add CMA filter output
     Input('reset-filters', 'n_clicks'),
     prevent_initial_call=True
 )
@@ -1093,7 +1099,7 @@ def reset_filters(n_clicks):
     return (
         [option['value'] for option in stem_bhase_options_full],
         [option['value'] for option in year_options_full],
-        [], [], [], []
+        [], [], [], [], []  # Added empty list for CMA filter
     )
 
 if __name__ == '__main__':

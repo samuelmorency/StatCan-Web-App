@@ -44,15 +44,17 @@ def button_args(id, background_color, color, format):
         }
     }
 
-def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
+def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):  # Add parameter
     stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = filter_args("year-filter", year_options_full, checklist_format)
     prov_args = filter_args("prov-filter", prov_options_full, multi_dropdown_format)
     isced_args = filter_args("isced-filter", isced_options_full, multi_dropdown_format)
     credential_args = filter_args("credential-filter", credential_options_full, multi_dropdown_format)
     institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
+    cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)  # Add this line
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
+    
     # Create the app layout
     app_layout = dbc.Container([
         dbc.Row([
@@ -76,6 +78,8 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         dcc.Checklist(**year_args),
                         html.Label("Province:"),
                         dcc.Dropdown(**prov_args),
+                        html.Label("Census Metropolitan Area/Census Agglomeration:"),  # Add these lines
+                        dcc.Dropdown(**cma_args),
                         html.Label("ISCED Level:"),
                         dcc.Dropdown(**isced_args),
                         html.Label("Credential Type:"),
