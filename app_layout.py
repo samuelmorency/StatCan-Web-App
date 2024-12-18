@@ -17,7 +17,15 @@ multi_dropdown_format = {
     "style": {"margin-bottom": "15px"}
 }
 
-def args(id, options, format):
+button_format = {
+    "margin-top": "15px",
+    "border": "none",
+    "padding": "10px 20px",
+    "border-radius": "5px",
+    #"margin-right": "10px"
+}
+
+def filter_args(id, options, format):
     return {
         "id": id,
         "options": options,
@@ -25,13 +33,26 @@ def args(id, options, format):
         **format
     }
 
+def button_args(id, background_color, color, format):
+    return {
+        "id": id,
+        "n_clicks": 0,
+        "style": {
+            "background-color": background_color,
+            "color": color,
+            **format
+        }
+    }
+
 def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full):
-    stem_bhase_args = args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
-    year_args = args("year-filter", year_options_full, checklist_format)
-    prov_args = args("prov-filter", prov_options_full, multi_dropdown_format)
-    isced_args = args("isced-filter", isced_options_full, multi_dropdown_format)
-    credential_args = args("credential-filter", credential_options_full, multi_dropdown_format)
-    institution_args = args("institution-filter", institution_options_full, multi_dropdown_format)
+    stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
+    year_args = filter_args("year-filter", year_options_full, checklist_format)
+    prov_args = filter_args("prov-filter", prov_options_full, multi_dropdown_format)
+    isced_args = filter_args("isced-filter", isced_options_full, multi_dropdown_format)
+    credential_args = filter_args("credential-filter", credential_options_full, multi_dropdown_format)
+    institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
+    reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
+    clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
     # Create the app layout
     app_layout = dbc.Container([
         dbc.Row([
@@ -61,31 +82,8 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         dcc.Dropdown(**credential_args),
                         html.Label("Institution:"),
                         dcc.Dropdown(**institution_args),
-                        html.Button('Reset Filters', 
-                            id='reset-filters', 
-                            n_clicks=0, 
-                            style={
-                                "margin-top": "15px",
-                                "background-color": bc.MAIN_RED,
-                                "color": "white",
-                                "border": "none",
-                                "padding": "10px 20px",
-                                "border-radius": "5px",
-                                "margin-right": "10px"
-                            }
-                        ),
-                        html.Button('Clear Selection', 
-                            id='clear-selection', 
-                            n_clicks=0, 
-                            style={
-                                "margin-top": "15px",
-                                "background-color": bc.LIGHT_GREY,
-                                "color": bc.IIC_BLACK,
-                                "border": "none",
-                                "padding": "10px 20px",
-                                "border-radius": "5px"
-                            }
-                        ),
+                        html.Button('Reset Filters', **reset_filters_args),
+                        html.Button('Clear Selection', **clear_selection_args),
                         # Add dcc.Store components to store selected data for cross-filtering
                         dcc.Store(id='selected-isced', data=None),
                         dcc.Store(id='selected-province', data=None),
