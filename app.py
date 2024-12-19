@@ -20,6 +20,8 @@ import logging
 import atexit
 import brand_colours as bc
 from app_layout import create_layout
+import io
+import csv
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1172,6 +1174,43 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
         isced_options,
         cred_options,
         inst_options
+    )
+
+@app.callback(
+    Output("download-data", "data"),
+    Input("download-button", "n_clicks"),
+    State("table-cma", "data"),
+    prevent_initial_call=True,
+)
+def download_table(n_clicks, table_data):
+    """
+    Handles the download functionality for the table data.
+    Creates a CSV file from the current table data when the download button is clicked.
+    
+    Args:
+        n_clicks (int): Number of times the download button has been clicked
+        table_data (list): List of dictionaries containing the current table data
+        
+    Returns:
+        dict: Dictionary containing the file content and metadata for download
+    """
+    if not n_clicks or not table_data:
+        raise PreventUpdate
+
+    # Create a CSV string buffer
+    string_buffer = io.StringIO()
+    writer = csv.DictWriter(string_buffer, fieldnames=table_data[0].keys())
+    
+    # Write the header and data
+    writer.writeheader()
+    writer.writerows(table_data)
+    
+    # Return the CSV file
+    return dict(
+        content=string_buffer.getvalue(),
+        filename=f"graduates_by_cma_ca_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+        type="text/csv",
+        base64=False
     )
 
 if __name__ == '__main__':

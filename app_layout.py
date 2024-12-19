@@ -185,27 +185,54 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                     ], width=6)
                 ], className="mb-4"),
 
-                # Add the scrollable table at the bottom
-                html.H3("Number of Graduates by CMA/CA"),
-                dash_table.DataTable(
-                    id='table-cma',
-                    columns=[],  # Placeholder for table columns
-                    data=[],  # Placeholder for table data
-                    style_table={'height': '400px', 'overflowY': 'auto'},
-                    style_cell={
-                        'textAlign': 'left',
-                        'color': bc.IIC_BLACK,
-                        'backgroundColor': 'white'
-                    },
-                    style_header={
-                        'backgroundColor': bc.LIGHT_BLUE,
-                        'color': bc.IIC_BLACK,
-                        'fontWeight': 'bold'
-                    },
-                    page_action='none',  # Disable pagination
-                    sort_action='native',  # Enable sorting
-                    filter_action='native',  # Enable filtering
-                ),
+                # Add download button and table section
+                dbc.Card([
+                    dbc.CardHeader(
+                        dbc.Row([
+                            dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
+                            dbc.Col(
+                                html.Button(
+                                    "Download Table",
+                                    id='download-button',
+                                    style={
+                                        "background-color": bc.MAIN_BLUE,
+                                        "color": "white",
+                                        "border": "none",
+                                        "padding": "10px 20px",
+                                        "border-radius": "5px",
+                                        "float": "right"
+                                    }
+                                ),
+                                width=3
+                            ),
+                        ]),
+                        className="d-flex align-items-center"
+                    ),
+                    dbc.CardBody([
+                        # Add download component (hidden)
+                        dcc.Download(id="download-data"),
+                        # Existing table
+                        dash_table.DataTable(
+                            id='table-cma',
+                            columns=[],  # Placeholder for table columns
+                            data=[],  # Placeholder for table data
+                            style_table={'height': '400px', 'overflowY': 'auto'},
+                            style_cell={
+                                'textAlign': 'left',
+                                'color': bc.IIC_BLACK,
+                                'backgroundColor': 'white'
+                            },
+                            style_header={
+                                'backgroundColor': bc.LIGHT_BLUE,
+                                'color': bc.IIC_BLACK,
+                                'fontWeight': 'bold'
+                            },
+                            page_action='none',  # Disable pagination
+                            sort_action='native',  # Enable sorting
+                            filter_action='native',  # Enable filtering
+                        ),
+                    ])
+                ], className="mb-4"),
             ], width=9)
         ])
     ], fluid=True)
