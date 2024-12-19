@@ -1102,5 +1102,78 @@ def reset_filters(n_clicks):
         [], [], [], [], []  # Added empty list for CMA filter
     )
 
+def filter_options(data, column, selected_filters):
+    """
+    Returns available options for a filter based on currently selected values in other filters.
+    
+    Args:
+        data (pandas.DataFrame): The source data
+        column (str): The column name to get options for
+        selected_filters (dict): Dictionary of currently selected values for other filters
+    
+    Returns:
+        list: List of available options as dictionaries with 'label' and 'value' keys
+    """
+    mask = pd.Series(True, index=data.index)
+    for col, values in selected_filters.items():
+        if values and col != column:
+            mask &= data.index.get_level_values(col).isin(values)
+    
+    available_values = sorted(data[mask].index.get_level_values(column).unique())
+    return [{'label': val, 'value': val} for val in available_values]
+
+@app.callback(
+    Output('stem-bhase-filter', 'options'),
+    Output('year-filter', 'options'),
+    Output('prov-filter', 'options'),
+    Output('cma-filter', 'options'),
+    Output('isced-filter', 'options'),
+    Output('credential-filter', 'options'),
+    Output('institution-filter', 'options'),
+    Input('stem-bhase-filter', 'value'),
+    Input('year-filter', 'value'),
+    Input('prov-filter', 'value'),
+    Input('isced-filter', 'value'),
+    Input('credential-filter', 'value'),
+    Input('institution-filter', 'value'),
+    Input('cma-filter', 'value')
+)
+def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas):
+    """Updates filter options based on other filter selections"""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+        
+    # Create dictionary of current filter selections
+    current_filters = {
+        'STEM/BHASE': stem_bhase or [],
+        'year': years or [],
+        'Province_Territory': provs or [],
+        'CMA_CA': cmas or [],
+        'ISCED_level_of_education': isced or [],
+        'Credential_Type': credentials or [],
+        'Institution': institutions or []
+    }
+    
+    # Get updated options for each filter
+    stem_options = filter_options(data, 'STEM/BHASE', {k:v for k,v in current_filters.items() if k != 'STEM/BHASE'})
+    year_options = filter_options(data, 'year', {k:v for k,v in current_filters.items() if k != 'year'})
+    prov_options = filter_options(data, 'Province_Territory', {k:v for k,v in current_filters.items() if k != 'Province_Territory'})
+    cma_options = filter_options(data, 'CMA_CA', {k:v for k,v in current_filters.items() if k != 'CMA_CA'})
+    isced_options = filter_options(data, 'ISCED_level_of_education', {k:v for k,v in current_filters.items() if k != 'ISCED_level_of_education'})
+    cred_options = filter_options(data, 'Credential_Type', {k:v for k,v in current_filters.items() if k != 'Credential_Type'})
+    inst_options = filter_options(data, 'Institution', {k:v for k,v in current_filters.items() if k != 'Institution'})
+    
+    return (
+        stem_options,
+        year_options,
+        prov_options,
+        cma_options,
+        isced_options,
+        cred_options,
+        inst_options
+    )
+
 if __name__ == '__main__':
     app.run_server(debug=False)
+
