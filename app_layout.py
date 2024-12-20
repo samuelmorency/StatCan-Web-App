@@ -88,7 +88,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         dcc.Dropdown(**institution_args),
                         html.Button('Reset Filters', **reset_filters_args),
                         html.Button('Clear Selection', **clear_selection_args),
-                        # Add dcc.Store components to store selected data for cross-filtering
+                        # Store selected data for cross-filtering
                         dcc.Store(id='selected-isced', data=None),
                         dcc.Store(id='selected-province', data=None),
                         dcc.Store(id='selected-cma', data=None),

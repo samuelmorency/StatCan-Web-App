@@ -22,45 +22,97 @@ import brand_colours as bc
 from app_layout import create_layout
 import io
 import csv
+import hashlib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Azure App Service cache configuration
 class AzureCache:
     def __init__(self):
         self._CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
-        self._DEFAULT_SIZE = 512e6  # 512MB default
-        self._FALLBACK_SIZE = 128e6  # 128MB fallback
+        self._DEFAULT_SIZE = 1024e6  # 1GB
+        self._FALLBACK_SIZE = 256e6
+        self._TTL = 3600
         self._cache = None
+        self._memory_cache = {}
+        self._last_access = {}
+        self._MAX_MEMORY_ITEMS = 1000
         self.initialize_cache()
 
-    @property
-    def cache_dir(self):
-        return self._CACHE_DIR
-        
-    @property
-    def cache(self):
+    def _prune_memory_cache(self):
+        if len(self._memory_cache) > self._MAX_MEMORY_ITEMS:
+            sorted_items = sorted(self._last_access.items(), key=lambda x: x[1])
+            to_remove = len(self._memory_cache) - self._MAX_MEMORY_ITEMS
+            for key, _ in sorted_items[:to_remove]:
+                self._memory_cache.pop(key, None)
+                self._last_access.pop(key, None)
+
+    def get_cache(self):
+        if not self._cache:
+            self.initialize_cache()
         return self._cache
 
+    def get_cache_value(self, key):
+        current_time = time.time()
+        
+        if key in self._memory_cache:
+            self._last_access[key] = current_time
+            return self._memory_cache[key]
+
+        if self._cache:
+            try:
+                value = self._cache.get(key)
+                if value is not None:
+                    self._memory_cache[key] = value
+                    self._last_access[key] = current_time
+                    self._prune_memory_cache()
+                return value
+            except Exception as e:
+                logger.warning(f"Disk cache retrieval failed: {e}")
+        return None
+
+    def set_cache_value(self, key, value, ttl=None):
+        ttl = ttl or self._TTL
+        current_time = time.time()
+
+        self._memory_cache[key] = value
+        self._last_access[key] = current_time
+        self._prune_memory_cache()
+
+        if self._cache:
+            try:
+                self._cache.set(key, value, expire=ttl)
+            except Exception as e:
+                logger.warning(f"Disk cache set failed: {e}")
+
     def initialize_cache(self):
-        """Initialize cache with fallback options"""
         try:
             os.makedirs(self._CACHE_DIR, exist_ok=True)
-            self._cache = Cache(self._CACHE_DIR, size_limit=self._DEFAULT_SIZE)
+            self._cache = Cache(
+                directory=self._CACHE_DIR,
+                size_limit=self._DEFAULT_SIZE,
+                eviction_policy='least-recently-used',
+                cull_limit=10,
+                statistics=True
+            )
             logger.info(f"Cache initialized at {self._CACHE_DIR} with size {self._DEFAULT_SIZE/1e6}MB")
         except Exception as e:
             logger.warning(f"Primary cache initialization failed: {e}")
             try:
-                self._cache = Cache(self._CACHE_DIR, size_limit=self._FALLBACK_SIZE)
+                self._cache = Cache(
+                    directory=self._CACHE_DIR,
+                    size_limit=self._FALLBACK_SIZE,
+                    eviction_policy='least-recently-used'
+                )
                 logger.info(f"Fallback cache initialized with size {self._FALLBACK_SIZE/1e6}MB")
             except Exception as e:
                 logger.error(f"Cache initialization completely failed: {e}")
                 self._cache = None
 
     def clear_cache(self):
-        """Clear cache on shutdown"""
+        self._memory_cache.clear()
+        self._last_access.clear()
         if self._cache:
             try:
                 self._cache.clear()
@@ -68,11 +120,40 @@ class AzureCache:
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
-    def get_cache(self):
-        """Get cache instance with initialization check"""
-        if not self._cache:
-            self.initialize_cache()
-        return self._cache
+def azure_cache_decorator(ttl=3600):
+    """
+    Decorator for caching function results with configurable TTL.
+
+    Args:
+        ttl (int): Time-to-live in seconds for cached results
+
+    Returns:
+        function: Decorated function with caching capability
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                # Create consistent cache key using hash
+                key_str = f"{func.__module__}.{func.__name__}:{str(args)}:{str(sorted(kwargs.items()))}"
+                key = hashlib.md5(key_str.encode()).hexdigest()
+
+                # Try getting from cache
+                result = azure_cache.get_cache_value(key)
+                if result is not None:
+                    logger.debug(f"Cache hit for {func.__name__}")
+                    return result
+
+                # Calculate and cache result
+                result = func(*args, **kwargs)
+                azure_cache.set_cache_value(key, result, ttl=ttl)
+                logger.debug(f"Cache miss for {func.__name__}, stored new result")
+                return result
+            except Exception as e:
+                logger.error(f"Cache decorator failed for {func.__name__}: {e}")
+                return func(*args, **kwargs)  # Fallback to original function
+        return wrapper
+    return decorator
 
 # Initialize Azure-specific cache
 azure_cache = AzureCache()
@@ -84,20 +165,6 @@ atexit.register(azure_cache.clear_cache)
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
-
-# Modified cache decorator with retry logic
-def azure_cache_decorator(func):
-    """Decorator for Azure-friendly caching with retry logic"""
-    def wrapper(*args, **kwargs):
-        if not cache:
-            return func(*args, **kwargs)
-        
-        try:
-            return cache.memoize(expire=3600)(func)(*args, **kwargs)
-        except Exception as e:
-            logger.warning(f"Cache operation failed for {func.__name__}: {e}")
-            return func(*args, **kwargs)
-    return wrapper
 
 class MapState:
     """
@@ -195,7 +262,7 @@ class MapState:
 # Initialize map state
 map_state = MapState()
 
-@lru_cache(maxsize=32)
+@azure_cache_decorator(ttl=600)  # 10 minutes - calculated values
 def calculate_optimal_viewport(bounds, padding_factor=0.1):
     """
     Computes an optimal viewport given geographic bounds. If the provided bounds
@@ -257,6 +324,7 @@ def calculate_optimal_viewport(bounds, padding_factor=0.1):
             'zoom': 4
         }
 
+@azure_cache_decorator(ttl=600)  # 10 minutes - calculated values
 def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
     """
     Determines a suitable zoom level based on the size of a geographic bounding box.
@@ -288,7 +356,7 @@ def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
     elif max_diff <= 16: return 5
     else: return 4
 
-@lru_cache(maxsize=128)
+@azure_cache_decorator(ttl=300)  # 5 minutes - color calculations
 def create_color_scale(max_val, min_val, n_colors=9):
     """
     Creates a dictionary mapping a range of values to a corresponding set of colors
@@ -340,8 +408,7 @@ class CallbackContextManager:
             return self._triggered['value']
         return None
 
-@functools.lru_cache(maxsize=64)  # Increased cache size
-@azure_cache_decorator
+@azure_cache_decorator(ttl=3600)  # 1 hour cache
 def load_spatial_data():
     """
     Loads geospatial data for provinces and combined CMA/CA polygons from parquet files.
@@ -357,7 +424,7 @@ def load_spatial_data():
     combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
     return province_longlat_clean, combined_longlat_clean
 
-@functools.lru_cache(maxsize=1)
+@azure_cache_decorator(ttl=3600)  # 1 hour cache
 def load_and_process_educational_data():
     """
     Loads preprocessed educational data from a pickle file. The data includes variables
@@ -407,8 +474,7 @@ def filter_data(data, filters):
     
     return data[mask]
 
-@cache.memoize(expire=3600)  # Cache for 1 hour
-@azure_cache_decorator
+@azure_cache_decorator(ttl=300)  # 5 minutes - results depend on user filters
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions, selected_cmas):
     """
@@ -511,8 +577,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'tooltip': f"CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates)}"
     }
 
-@cache.memoize(expire=300)  # Cache for 5 minutes
-@azure_cache_decorator
+@azure_cache_decorator(ttl=300)  # 5 minutes - visualization data
 def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     """Creates a horizontal bar chart."""
     if dataframe.empty:
@@ -1104,6 +1169,7 @@ def reset_filters(n_clicks):
         [], [], [], [], []  # Added empty list for CMA filter
     )
 
+@azure_cache_decorator(ttl=300)  # 5 minutes - filter options change with selections
 def filter_options(data, column, selected_filters):
     """
     Returns available options for a filter based on currently selected values in other filters.
@@ -1212,6 +1278,16 @@ def download_table(n_clicks, table_data):
         type="text/csv",
         base64=False
     )
+
+@app.callback(
+    Output("horizontal-collapse", "is_open"),
+    [Input("horizontal-collapse-button", "n_clicks")],
+    [State("horizontal-collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 if __name__ == '__main__':
     app.run_server(debug=False)
