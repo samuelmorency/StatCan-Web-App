@@ -25,6 +25,59 @@ button_format = {
     #"margin-right": "10px"
 }
 
+tile_layer = dl.TileLayer(
+    url='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+    attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'
+)
+
+geo_json = dl.GeoJSON(
+    id='cma-geojson',
+    data=None,
+    style=assign("""
+    function(feature) {
+        return feature.properties.style;
+    }
+    """),
+    zoomToBounds=True,
+    hoverStyle=dict(
+        weight=2, color='black', dashArray='',
+        fillOpacity=0.7
+    ),
+    onEachFeature=assign("""
+    function(feature, layer) {
+        if (feature.properties && feature.properties.tooltip) {
+            layer.bindTooltip(feature.properties.tooltip);
+        }
+    }
+    """),
+    options=dict(interactive=True),
+    eventHandlers=dict(
+        click=assign("""
+        function(e, ctx) {
+            e.originalEvent._stopped = true;
+            const clickData = {
+                feature: e.sourceTarget.feature.properties.DGUID,
+                points: [{
+                    featureId: e.sourceTarget.feature.properties.DGUID
+                }]
+            };
+            ctx.setProps({ 
+                clickData: clickData,
+                clickedFeature: null  // Reset the clicked feature
+            });
+        }
+        """)
+    ),
+)
+
+map_args = dict(
+    id='map',
+    center=[56, -96],
+    zoom=4,
+    children=[tile_layer, geo_json],
+    style={'width': '100%', 'height': '600px'},
+)
+
 def filter_args(id, options, format):
     return {
         "id": id,
@@ -54,6 +107,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
     cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)  # Add this line
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
+    download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
     # Create the app layout
     app_layout = dbc.Container([
@@ -98,61 +152,10 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
             ], width=3),
 
             dbc.Col([
-                # Remove Spinner from map, keep direct map component
                 dbc.Card([
                     dbc.CardHeader("Graduates by CMA/CA"),
                     dbc.CardBody([
-                        dl.Map(
-                            id='map',
-                            center=[56, -96],
-                            zoom=4,
-                            children=[
-                                dl.TileLayer(
-                                    url='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-                                    attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'
-                                ),
-                                dl.GeoJSON(
-                                    id='cma-geojson',
-                                    data=None,
-                                    style=assign("""
-                                    function(feature) {
-                                        return feature.properties.style;
-                                    }
-                                    """),
-                                    zoomToBounds=True,
-                                    hoverStyle=dict(
-                                        weight=2, color='black', dashArray='',
-                                        fillOpacity=0.7
-                                    ),
-                                    onEachFeature=assign("""
-                                    function(feature, layer) {
-                                        if (feature.properties && feature.properties.tooltip) {
-                                            layer.bindTooltip(feature.properties.tooltip);
-                                        }
-                                    }
-                                    """),
-                                    options=dict(interactive=True),
-                                    eventHandlers=dict(
-                                        click=assign("""
-                                        function(e, ctx) {
-                                            e.originalEvent._stopped = true;
-                                            const clickData = {
-                                                feature: e.sourceTarget.feature.properties.DGUID,
-                                                points: [{
-                                                    featureId: e.sourceTarget.feature.properties.DGUID
-                                                }]
-                                            };
-                                            ctx.setProps({ 
-                                                clickData: clickData,
-                                                clickedFeature: null  // Reset the clicked feature
-                                            });
-                                        }
-                                        """)
-                                    ),
-                                ),
-                            ],
-                            style={'width': '100%', 'height': '600px'},
-                        ),
+                        dl.Map(**map_args),
                     ])
                 ], className="mb-4"),
 
@@ -191,18 +194,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         dbc.Row([
                             dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
                             dbc.Col(
-                                html.Button(
-                                    "Download Table",
-                                    id='download-button',
-                                    style={
-                                        "background-color": bc.MAIN_BLUE,
-                                        "color": "white",
-                                        "border": "none",
-                                        "padding": "10px 20px",
-                                        "border-radius": "5px",
-                                        "float": "right"
-                                    }
-                                ),
+                                html.Button("Download Table",**download_button_args),
                                 width=3
                             ),
                         ]),
