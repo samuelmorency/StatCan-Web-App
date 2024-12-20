@@ -25,6 +25,26 @@ button_format = {
     #"margin-right": "10px"
 }
 
+table = dash_table.DataTable(
+    id='table-cma',
+    columns=[],  # Placeholder for table columns
+    data=[],  # Placeholder for table data
+    style_table={'height': '400px', 'overflowY': 'auto'},
+    style_cell={
+        'textAlign': 'left',
+        'color': bc.IIC_BLACK,
+        'backgroundColor': 'white'
+    },
+    style_header={
+        'backgroundColor': bc.LIGHT_BLUE,
+        'color': bc.IIC_BLACK,
+        'fontWeight': 'bold'
+    },
+    page_action='none',  # Disable pagination
+    sort_action='native',  # Enable sorting
+    filter_action='native',  # Enable filtering
+)
+
 tile_layer = dl.TileLayer(
     url='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
     attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'
@@ -78,6 +98,7 @@ map_args = dict(
     style={'width': '100%', 'height': '600px'},
 )
 
+
 def filter_args(id, options, format):
     return {
         "id": id,
@@ -104,7 +125,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
     isced_args = filter_args("isced-filter", isced_options_full, multi_dropdown_format)
     credential_args = filter_args("credential-filter", credential_options_full, multi_dropdown_format)
     institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
-    cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)  # Add this line
+    cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
@@ -150,7 +171,6 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                     
                 ], className="mb-4 h-100"),
             ], width=3),
-
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader("Graduates by CMA/CA"),
@@ -158,9 +178,6 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         dl.Map(**map_args),
                     ])
                 ], className="mb-4"),
-
-                # Keep existing spinners for charts
-                # Arrange the two graphs side by side with chart type selection
                 dbc.Row([
                     dbc.Col([
                         dbc.Card([
@@ -204,25 +221,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         # Add download component (hidden)
                         dcc.Download(id="download-data"),
                         # Existing table
-                        dash_table.DataTable(
-                            id='table-cma',
-                            columns=[],  # Placeholder for table columns
-                            data=[],  # Placeholder for table data
-                            style_table={'height': '400px', 'overflowY': 'auto'},
-                            style_cell={
-                                'textAlign': 'left',
-                                'color': bc.IIC_BLACK,
-                                'backgroundColor': 'white'
-                            },
-                            style_header={
-                                'backgroundColor': bc.LIGHT_BLUE,
-                                'color': bc.IIC_BLACK,
-                                'fontWeight': 'bold'
-                            },
-                            page_action='none',  # Disable pagination
-                            sort_action='native',  # Enable sorting
-                            filter_action='native',  # Enable filtering
-                        ),
+                        table,
                     ])
                 ], className="mb-4"),
             ], width=9)
