@@ -33,14 +33,19 @@ table = dash_table.DataTable(
     style_cell={
         'textAlign': 'left',
         'color': bc.IIC_BLACK,
-        'backgroundColor': 'white'
+        'backgroundColor': 'white',
+        'minWidth': '100px',  # Added to handle wider content
+        'overflow': 'hidden',
+        'textOverflow': 'ellipsis',
+        'maxWidth': '400px'  # Added to prevent columns from getting too wide
     },
     style_header={
         'backgroundColor': bc.LIGHT_BLUE,
         'color': bc.IIC_BLACK,
         'fontWeight': 'bold'
     },
-    page_action='none',  # Disable pagination
+    page_size=25,  # Added pagination
+    page_action='native',  # Enable pagination
     sort_action='native',  # Enable sorting
     filter_action='native',  # Enable filtering
 )

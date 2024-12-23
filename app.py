@@ -1128,9 +1128,9 @@ def update_visualizations(*args):
             selected_province
         )
         
-        # Prepare table data
-        table_data = cma_grads.sort_values('graduates', ascending=False).to_dict('records')
-        table_columns = [{"name": i, "id": i} for i in cma_grads.columns]
+        # Prepare table data - show raw filtered data instead of CMA aggregations
+        table_data = filtered_data.reset_index().to_dict('records')
+        table_columns = [{"name": i, "id": i} for i in filtered_data.reset_index().columns]
         
         # Monitor cache at the start of major updates
         monitor_cache_usage()
