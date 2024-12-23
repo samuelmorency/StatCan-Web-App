@@ -1130,21 +1130,69 @@ def update_visualizations(*args):
         )
         
         # Prepare table data - show raw filtered data instead of CMA aggregations
+        # Update column definitions with enhanced features
         column_defs = [
             {
-                "field": col,
-                "headerName": col.replace('_', ' ').title(),
+                "field": "STEM/BHASE",
+                "headerName": "STEM/BHASE",
                 "enableRowGroup": True,
                 "rowGroup": False,
-                "type": "numericColumn" if col == "value" else None,
-                "aggFunc": "sum" if col == "value" else None,
-            } for col in filtered_data.reset_index().columns
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "year",
+                "headerName": "Year",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "Province_Territory",
+                "headerName": "Province/Territory",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "CMA_CA",
+                "headerName": "CMA/CA",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "ISCED_level_of_education",
+                "headerName": "ISCED Level",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "Credential_Type",
+                "headerName": "Credential Type",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "Institution",
+                "headerName": "Institution",
+                "enableRowGroup": True,
+                "filter": 'agSetColumnFilter',
+                "chartDataType": 'category'
+            },
+            {
+                "field": "value",
+                "headerName": "Graduates",
+                "type": "numericColumn",
+                "enableValue": True,
+                "aggFunc": "sum",
+                "filter": "agNumberColumnFilter",
+                "valueFormatter": {"function": "d3.format(',')(params.value)"},
+                "chartDataType": 'series'
+            }
         ]
-
-        # Specific formatting for the value column
-        for col in column_defs:
-            if col["field"] == "value":
-                col["valueFormatter"] = {"function": "d3.format(',')(params.value)"}
 
         row_data = filtered_data.reset_index().to_dict('records')
         

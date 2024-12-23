@@ -228,15 +228,36 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                                 "sortable": True,
                                 "filter": True,
                                 "minWidth": 125,
+                                "filterParams": {
+                                    "buttons": ["reset", "apply"],
+                                    "debounceMs": 200
+                                },
+                                "enableValue": True,
+                                "enablePivot": True,
+                                "enableRowGroup": True
                             },
                             dashGridOptions={
                                 "groupDisplayType": "groupRows",
                                 "rowSelection": "multiple",
+                                "pagination": True,
+                                "paginationPageSize": 100,
+                                "cacheBlockSize": 100,
+                                "rowBuffer": 100,
+                                "animateRows": True,
+                                "domLayout": 'autoHeight',
+                                "enableCharts": True,
+                                "enableRangeSelection": True,
+                                "statusBar": {
+                                    "statusPanels": [
+                                        {"statusPanel": "agTotalAndFilteredRowCountComponent"},
+                                        {"statusPanel": "agAggregationComponent"}
+                                    ]
+                                }
                             },
                             columnSize="sizeToFit",
                             enableEnterpriseModules=True,
                             className="ag-theme-alpine",
-                            style={"height": "500px"},
+                            style={"height": "600px", "width": "100%"},
                         )
                     ])
                 ], className="mb-4"),
