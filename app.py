@@ -23,6 +23,7 @@ from app_layout import create_layout
 import io
 import csv
 import hashlib
+from dash_ag_grid import AgGrid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1256,31 +1257,31 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
 @app.callback(
     Output("download-data", "data"),
     Input("download-button", "n_clicks"),
-    State("table-cma", "data"),
+    State("table-cma", "rowData"),
     prevent_initial_call=True,
 )
-def download_table(n_clicks, table_data):
+def download_table(n_clicks, row_data):
     """
     Handles the download functionality for the table data.
     Creates a CSV file from the current table data when the download button is clicked.
     
     Args:
         n_clicks (int): Number of times the download button has been clicked
-        table_data (list): List of dictionaries containing the current table data
+        row_data (list): List of dictionaries containing the current table data
         
     Returns:
         dict: Dictionary containing the file content and metadata for download
     """
-    if not n_clicks or not table_data:
+    if not n_clicks or not row_data:
         raise PreventUpdate
 
     # Create a CSV string buffer
     string_buffer = io.StringIO()
-    writer = csv.DictWriter(string_buffer, fieldnames=table_data[0].keys())
+    writer = csv.DictWriter(string_buffer, fieldnames=row_data[0].keys())
     
     # Write the header and data
     writer.writeheader()
-    writer.writerows(table_data)
+    writer.writerows(row_data)
     
     # Return the CSV file
     return dict(
@@ -1299,6 +1300,102 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
+
+@app.callback(
+    Output('table-cma', 'columnDefs'),
+    Output('table-cma', 'rowData'),
+    [Input('stem-bhase-filter', 'value'),
+     Input('year-filter', 'value'),
+     Input('prov-filter', 'value'),
+     Input('isced-filter', 'value'),
+     Input('credential-filter', 'value'),
+     Input('institution-filter', 'value'),
+     Input('cma-filter', 'value'),
+     Input('selected-isced', 'data'),
+     Input('selected-province', 'data'),
+     Input('selected-cma', 'data')]
+)
+def update_table(*args):
+    """
+    Updates the AG Grid table with filtered data and configurable columns
+    """
+    try:
+        # Get filtered data using existing preprocess_data function
+        filtered_data, *_ = preprocess_data(
+            tuple(args[0] or []),  # stem_bhase
+            tuple(args[1] or []),  # years
+            tuple(args[2] or []),  # provs
+            tuple(args[3] or []),  # isced
+            tuple(args[4] or []),  # credentials
+            tuple(args[5] or []),  # institutions
+            tuple(args[6] or [])   # cma_filter
+        )
+
+        if filtered_data.empty:
+            return [], []
+
+        # Define column configurations
+        column_defs = [
+            {
+                "field": "STEM/BHASE",
+                "headerName": "STEM/BHASE",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "year",
+                "headerName": "Year",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "Province_Territory",
+                "headerName": "Province/Territory",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "CMA_CA",
+                "headerName": "CMA/CA",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "ISCED_level_of_education",
+                "headerName": "ISCED Level",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "Credential_Type",
+                "headerName": "Credential Type",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "Institution",
+                "headerName": "Institution",
+                "enableRowGroup": True,
+                "rowGroup": False,
+            },
+            {
+                "field": "value",
+                "headerName": "Graduates",
+                "type": "numericColumn",
+                "enableValue": True,
+                "aggFunc": "sum",
+                "valueFormatter": {"function": "d3.format(',')(params.value)"},
+            }
+        ]
+
+        # Convert data to records format
+        row_data = filtered_data.reset_index().to_dict('records')
+
+        return column_defs, row_data
+
+    except Exception as e:
+        logger.error(f"Error in update_table: {str(e)}")
+        return [], []
 
 if __name__ == '__main__':
     app.run_server(debug=True)

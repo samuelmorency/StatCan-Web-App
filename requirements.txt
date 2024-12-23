@@ -19,3 +19,4 @@ pyproj==3.7.0
 orjson==3.10.12
 werkzeug==3.0.6
 flask==3.0.3
+dash-ag-grid>=2.0.0

@@ -3,6 +3,7 @@ from dash import html, dcc, dash_table
 import brand_colours as bc
 from dash_extensions.javascript import assign
 import dash_leaflet as dl
+from dash_ag_grid import AgGrid
 
 checklist_format = {
     "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
@@ -24,31 +25,6 @@ button_format = {
     "border-radius": "5px",
     #"margin-right": "10px"
 }
-
-table = dash_table.DataTable(
-    id='table-cma',
-    columns=[],  # Placeholder for table columns
-    data=[],  # Placeholder for table data
-    style_table={'height': '400px', 'overflowY': 'auto'},
-    style_cell={
-        'textAlign': 'left',
-        'color': bc.IIC_BLACK,
-        'backgroundColor': 'white',
-        'minWidth': '100px',  # Added to handle wider content
-        'overflow': 'hidden',
-        'textOverflow': 'ellipsis',
-        'maxWidth': '400px'  # Added to prevent columns from getting too wide
-    },
-    style_header={
-        'backgroundColor': bc.LIGHT_BLUE,
-        'color': bc.IIC_BLACK,
-        'fontWeight': 'bold'
-    },
-    page_size=25,  # Added pagination
-    page_action='native',  # Enable pagination
-    sort_action='native',  # Enable sorting
-    filter_action='native',  # Enable filtering
-)
 
 tile_layer = dl.TileLayer(
     url='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
@@ -242,8 +218,26 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                     dbc.CardBody([
                         # Add download component (hidden)
                         dcc.Download(id="download-data"),
-                        # Existing table
-                        table,
+                        # Replace the dash_table.DataTable with AgGrid
+                        AgGrid(
+                            id='table-cma',
+                            columnDefs=[],
+                            rowData=[],
+                            defaultColDef={
+                                "resizable": True,
+                                "sortable": True,
+                                "filter": True,
+                                "minWidth": 125,
+                            },
+                            dashGridOptions={
+                                "groupDisplayType": "groupRows",
+                                "rowSelection": "multiple",
+                            },
+                            columnSize="sizeToFit",
+                            enableEnterpriseModules=True,
+                            className="ag-theme-alpine",
+                            style={"height": "500px"},
+                        )
                     ])
                 ], className="mb-4"),
             ], width=9)
