@@ -773,7 +773,11 @@ credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(dat
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
 
-app.layout = create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
+app.layout = html.Div([
+    dcc.Store(id='client-data-store', storage_type='session'),
+    dcc.Store(id='client-filters-store', storage_type='local'),
+    create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
+])
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """

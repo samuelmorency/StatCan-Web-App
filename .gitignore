@@ -147,7 +147,9 @@ assets/dashExtensions_default.js
 
 # data
 /hidden
-/assets
+custom.css
+custom.js
+dashExtensions_default.js
 app2.py
 app_working.py
 app_working_backup.py
