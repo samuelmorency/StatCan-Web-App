@@ -182,7 +182,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         ])
                         ], className="mb-4 h-100"),
                     id="horizontal-collapse",
-                    is_open=False,
+                    is_open=True,
                     dimension="width",
                 )
             ], width="auto"),
