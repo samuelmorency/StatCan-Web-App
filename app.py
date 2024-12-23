@@ -301,7 +301,7 @@ def calculate_optimal_viewport(bounds, padding_factor=0.1):
             min_lat = center_lat - 0.05
             max_lat = center_lat + 0.05
         if abs(max_lon - min_lon) < 0.1:
-            center_lon = (max_lon + min_lon) / 2
+            center_lon = (max_lon + min_lat) / 2
             min_lon = center_lon - 0.05
             max_lon = center_lon + 0.05
             
@@ -648,16 +648,16 @@ def create_empty_response():
     """
     empty_geojson = {'type': 'FeatureCollection', 'features': []}
     empty_fig = {}
-    empty_data = []
-    empty_columns = []
+    empty_row_data = []
+    empty_column_defs = []
     default_bounds = [[41, -141], [83, -52]]  # Canada bounds
     
     return (
         empty_geojson,
         empty_fig,
         empty_fig,
-        empty_data,
-        empty_columns,
+        empty_row_data,  # Changed from empty_data
+        empty_column_defs,  # Changed from empty_columns
         dict(bounds=default_bounds, transition="flyToBounds")
     )
 
@@ -970,8 +970,8 @@ def monitor_cache_usage():
     Output('cma-geojson', 'data'),
     Output('graph-isced', 'figure'),
     Output('graph-province', 'figure'),
-    Output('table-cma', 'data'),
-    Output('table-cma', 'columns'),
+    Output('table-cma', 'rowData'),  # Changed from 'data'
+    Output('table-cma', 'columnDefs'),  # Changed from 'columns'
     Output('map', 'viewport'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
@@ -1130,8 +1130,23 @@ def update_visualizations(*args):
         )
         
         # Prepare table data - show raw filtered data instead of CMA aggregations
-        table_data = filtered_data.reset_index().to_dict('records')
-        table_columns = [{"name": i, "id": i} for i in filtered_data.reset_index().columns]
+        column_defs = [
+            {
+                "field": col,
+                "headerName": col.replace('_', ' ').title(),
+                "enableRowGroup": True,
+                "rowGroup": False,
+                "type": "numericColumn" if col == "value" else None,
+                "aggFunc": "sum" if col == "value" else None,
+            } for col in filtered_data.reset_index().columns
+        ]
+
+        # Specific formatting for the value column
+        for col in column_defs:
+            if col["field"] == "value":
+                col["valueFormatter"] = {"function": "d3.format(',')(params.value)"}
+
+        row_data = filtered_data.reset_index().to_dict('records')
         
         # Monitor cache at the start of major updates
         monitor_cache_usage()
@@ -1140,8 +1155,8 @@ def update_visualizations(*args):
             geojson_data,
             fig_isced,
             fig_province,
-            table_data,
-            table_columns,
+            row_data,  # Changed from table_data
+            column_defs,  # Changed from table_columns
             viewport_output
         )
         
@@ -1300,102 +1315,6 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
-
-@app.callback(
-    Output('table-cma', 'columnDefs'),
-    Output('table-cma', 'rowData'),
-    [Input('stem-bhase-filter', 'value'),
-     Input('year-filter', 'value'),
-     Input('prov-filter', 'value'),
-     Input('isced-filter', 'value'),
-     Input('credential-filter', 'value'),
-     Input('institution-filter', 'value'),
-     Input('cma-filter', 'value'),
-     Input('selected-isced', 'data'),
-     Input('selected-province', 'data'),
-     Input('selected-cma', 'data')]
-)
-def update_table(*args):
-    """
-    Updates the AG Grid table with filtered data and configurable columns
-    """
-    try:
-        # Get filtered data using existing preprocess_data function
-        filtered_data, *_ = preprocess_data(
-            tuple(args[0] or []),  # stem_bhase
-            tuple(args[1] or []),  # years
-            tuple(args[2] or []),  # provs
-            tuple(args[3] or []),  # isced
-            tuple(args[4] or []),  # credentials
-            tuple(args[5] or []),  # institutions
-            tuple(args[6] or [])   # cma_filter
-        )
-
-        if filtered_data.empty:
-            return [], []
-
-        # Define column configurations
-        column_defs = [
-            {
-                "field": "STEM/BHASE",
-                "headerName": "STEM/BHASE",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "year",
-                "headerName": "Year",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "Province_Territory",
-                "headerName": "Province/Territory",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "CMA_CA",
-                "headerName": "CMA/CA",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "ISCED_level_of_education",
-                "headerName": "ISCED Level",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "Credential_Type",
-                "headerName": "Credential Type",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "Institution",
-                "headerName": "Institution",
-                "enableRowGroup": True,
-                "rowGroup": False,
-            },
-            {
-                "field": "value",
-                "headerName": "Graduates",
-                "type": "numericColumn",
-                "enableValue": True,
-                "aggFunc": "sum",
-                "valueFormatter": {"function": "d3.format(',')(params.value)"},
-            }
-        ]
-
-        # Convert data to records format
-        row_data = filtered_data.reset_index().to_dict('records')
-
-        return column_defs, row_data
-
-    except Exception as e:
-        logger.error(f"Error in update_table: {str(e)}")
-        return [], []
 
 if __name__ == '__main__':
     app.run_server(debug=True)
