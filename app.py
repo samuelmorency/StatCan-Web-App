@@ -585,6 +585,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         return {}
     
     sorted_data = dataframe.sort_values(y_column, ascending=True)
+    sorted_data['text'] = sorted_data[y_column].apply(lambda x: f'{int(x):,}')
     
     fig = px.bar(
         sorted_data,
@@ -595,7 +596,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         labels={y_column: 'Number of Graduates', x_column: x_label},
         color=y_column,
         color_continuous_scale='Reds',  # Simplified color scale definition
-        range_color=[sorted_data[y_column].min(), sorted_data[y_column].max()]
+        text='text'
     )
     
     if selected_value:
@@ -603,7 +604,15 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         fig.data[0].marker.color = colors
         fig.update_coloraxes(showscale=False)
     
+    # Configure text position and style
+    fig.update_traces(
+        textposition='outside',  # Place text outside of bars
+        cliponaxis=False,  # Prevent text from being cut off
+        textfont=dict(color=bc.IIC_BLACK)  # Match text color to theme
+    )
+    
     fig.update_layout(
+        showlegend=False,
         xaxis_title='Number of Graduates',
         yaxis_title=x_label,
         height=500,
