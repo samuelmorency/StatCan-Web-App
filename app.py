@@ -1201,63 +1201,68 @@ def update_visualizations(*args):
         column_defs = [
             {
                 "field": "STEM/BHASE",
-                "headerName": "STEM/BHASE",
+                "headerName": "Category",
                 "enableRowGroup": True,
-                "rowGroup": False,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
                 "field": "year",
                 "headerName": "Year",
                 "enableRowGroup": True,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
                 "field": "Province_Territory",
                 "headerName": "Province/Territory",
                 "enableRowGroup": True,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
                 "field": "CMA_CA",
                 "headerName": "CMA/CA",
                 "enableRowGroup": True,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
-                "field": "ISCED_level_of_education",
-                "headerName": "ISCED Level",
+                "headerName": "Education Level",
+                "valueGetter": {
+                    "function": """
+                    const isced = params.data.ISCED_level_of_education;
+                    const cred = params.data.Credential_Type;
+                    return `${isced} (${cred})`;
+                    """
+                },
                 "enableRowGroup": True,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
-            },
-            {
-                "field": "Credential_Type",
-                "headerName": "Credential Type",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
                 "field": "Institution",
                 "headerName": "Institution",
                 "enableRowGroup": True,
                 "filter": 'agSetColumnFilter',
-                "chartDataType": 'category'
             },
             {
                 "field": "value",
                 "headerName": "Graduates",
                 "type": "numericColumn",
                 "enableValue": True,
+                "valueGetter": {
+                    "function": "Number(params.data.value).toLocaleString()"
+                },
                 "aggFunc": "sum",
                 "filter": "agNumberColumnFilter",
-                "valueFormatter": {"function": "d3.format(',')(params.value)"},
-                "chartDataType": 'series'
+            },
+            {
+                "headerName": "% of Total",
+                "type": "numericColumn",
+                "valueGetter": {
+                    "function": """
+                    const total = params.api.getModel().rootNode.childrenAfterFilter
+                        .reduce((sum, node) => sum + Number(node.data.value), 0);
+                    return ((params.data.value / total) * 100).toFixed(1) + '%';
+                    """
+                },
+                "filter": "agNumberColumnFilter",
             }
         ]
 
