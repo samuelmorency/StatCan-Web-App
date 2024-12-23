@@ -620,7 +620,8 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         clickmode='event+select',
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font={'color': bc.IIC_BLACK}
+        font={'color': bc.IIC_BLACK},
+        modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d'] # toImage can also be removed
     )
     
     return fig
