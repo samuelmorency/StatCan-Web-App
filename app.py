@@ -593,7 +593,6 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         y=x_column,
         orientation='h',
         title=f'Number of Graduates by {x_label}',
-        labels={y_column: 'Number of Graduates', x_column: x_label},
         color=y_column,
         color_continuous_scale='Reds',  # Simplified color scale definition
         text='text'
@@ -613,8 +612,9 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     
     fig.update_layout(
         showlegend=False,
-        xaxis_title='Number of Graduates',
-        yaxis_title=x_label,
+        coloraxis_showscale=False,
+        xaxis_title=None,
+        yaxis_title=None,
         height=500,
         margin=dict(l=50, r=50, t=50, b=50),
         clickmode='event+select',
