@@ -142,15 +142,19 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                 ], className="mb-4 border-0"),
             width=12)
         ]),
-        dbc.Row([
-            dbc.Col([
+        dbc.Row(
+            dbc.Col(
                 dbc.Button(
-                    "Filters",
+                    "Show/hide filters",
                     id="horizontal-collapse-button",
                     className="mb-3",
                     color="primary",
                     n_clicks=0,
-                ),
+                ), width="auto"
+            )
+        ),
+        dbc.Row([
+            dbc.Col([
                 dbc.Collapse(
                     dbc.Card([
                         dbc.CardHeader("Filters"),
