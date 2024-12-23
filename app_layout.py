@@ -155,35 +155,37 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
         ),
         dbc.Row([
             dbc.Col([
-                dbc.Collapse(
-                    dbc.Card([
-                        dbc.CardHeader("Filters"),
-                        dbc.CardBody([
-                            html.Label("STEM/BHASE:"),
-                            dcc.Checklist(**stem_bhase_args),
-                            html.Label("Academic Year:"),
-                            dcc.Checklist(**year_args),
-                            html.Label("Province:"),
-                            dcc.Dropdown(**prov_args),
-                            html.Label("Census Metropolitan Area/Census Agglomeration:"),  # Add these lines
-                            dcc.Dropdown(**cma_args),
-                            html.Label("ISCED Level:"),
-                            dcc.Dropdown(**isced_args),
-                            html.Label("Credential Type:"),
-                            dcc.Dropdown(**credential_args),
-                            html.Label("Institution:"),
-                            dcc.Dropdown(**institution_args),
-                            html.Button('Reset Filters', **reset_filters_args),
-                            html.Button('Clear Selection', **clear_selection_args),
-                            # Store selected data for cross-filtering
-                            dcc.Store(id='selected-isced', data=None),
-                            dcc.Store(id='selected-province', data=None),
-                            dcc.Store(id='selected-cma', data=None),
-                        ])
-                        ], className="mb-4 h-100"),
-                    id="horizontal-collapse",
-                    is_open=True,
-                    dimension="width",
+                html.Div(
+                    dbc.Collapse(
+                        dbc.Card([
+                            dbc.CardHeader("Filters"),
+                            dbc.CardBody([
+                                html.Label("STEM/BHASE:"),
+                                dcc.Checklist(**stem_bhase_args),
+                                html.Label("Academic Year:"),
+                                dcc.Checklist(**year_args),
+                                html.Label("Province:"),
+                                dcc.Dropdown(**prov_args),
+                                html.Label("Census Metropolitan Area/Census Agglomeration:"),  # Add these lines
+                                dcc.Dropdown(**cma_args),
+                                html.Label("ISCED Level:"),
+                                dcc.Dropdown(**isced_args),
+                                html.Label("Credential Type:"),
+                                dcc.Dropdown(**credential_args),
+                                html.Label("Institution:"),
+                                dcc.Dropdown(**institution_args),
+                                html.Button('Reset Filters', **reset_filters_args),
+                                html.Button('Clear Selection', **clear_selection_args),
+                                # Store selected data for cross-filtering
+                                dcc.Store(id='selected-isced', data=None),
+                                dcc.Store(id='selected-province', data=None),
+                                dcc.Store(id='selected-cma', data=None),
+                            ])
+                            ], className="mb-4 h-100"),
+                        id="horizontal-collapse",
+                        is_open=True,
+                        dimension="width",
+                    ), className="sticky-top"
                 )
             ], width="auto"),
             dbc.Col([
