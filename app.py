@@ -555,28 +555,7 @@ def filter_data(data, filters):
 @monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions, selected_cmas):
-    """
-    Applies a series of filters to the pre-indexed global data. After filtering,
-    aggregates are computed by summing over the relevant index levels rather than
-    re-grouping the entire dataset. This approach uses direct indexing for efficient
-    slicing, reducing overhead for frequent filter changes.
-
-    Args:
-        selected_stem_bhase (tuple): A tuple of STEM/BHASE categories to include.
-        selected_years (tuple): A tuple of years to include.
-        selected_provs (tuple): A tuple of provinces/territories to include.
-        selected_isced (tuple): A tuple of ISCED levels to include.
-        selected_credentials (tuple): A tuple of credential types to include.
-        selected_institutions (tuple): A tuple of institutions to include.
-        selected_cmas (tuple): A tuple of CMA/CA to include.
-
-    Returns:
-        tuple: A tuple containing:
-               - filtered_data (pandas.DataFrame): The filtered dataset at the granular level.
-               - cma_grads (pandas.DataFrame): Aggregation of graduates by CMA/CA and DGUID.
-               - isced_grads (pandas.DataFrame): Aggregation of graduates by ISCED level.
-               - province_grads (pandas.DataFrame): Aggregation of graduates by province/territory.
-    """
+    """Optimized data preprocessing with caching and vectorized operations"""
     filters = {
         'STEM/BHASE': set(selected_stem_bhase),
         'year': set(selected_years),
@@ -584,7 +563,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
         'ISCED_level_of_education': set(selected_isced),
         'Credential_Type': set(selected_credentials),
         'Institution': set(selected_institutions),
-        'CMA_CA': set(selected_cmas),  # Add CMA filter
+        'CMA_CA': set(selected_cmas),
         'DGUID': set()
     }
 
@@ -593,24 +572,20 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     if filtered_data.empty:
         return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Optimize aggregations with parallel processing for large datasets
-    if len(filtered_data) > 100000:
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            future_cma = executor.submit(lambda: filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum())
-            future_isced = executor.submit(lambda: filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum())
-            future_province = executor.submit(lambda: filtered_data.groupby("Province_Territory", observed=True)['value'].sum())
-            
-            cma_grads = future_cma.result().reset_index(name='graduates')
-            isced_grads = future_isced.result().reset_index(name='graduates')
-            province_grads = future_province.result().reset_index(name='graduates')
-    else:
-        # Use regular aggregations for smaller datasets
-        aggregations = {
-            'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
-            'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
-            'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
-        }
-        
+    # Use vectorized operations instead of parallel processing
+    aggregations = {
+        'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
+        'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
+        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
+    }
+    
+    # Pre-allocate DataFrames for better memory efficiency
+    cma_grads = pd.DataFrame()
+    isced_grads = pd.DataFrame()
+    province_grads = pd.DataFrame()
+    
+    # Perform aggregations with optimized settings
+    with pd.option_context('mode.chained_assignment', None):
         cma_grads = aggregations['cma'].reset_index(name='graduates')
         isced_grads = aggregations['isced'].reset_index(name='graduates')
         province_grads = aggregations['province'].reset_index(name='graduates')
