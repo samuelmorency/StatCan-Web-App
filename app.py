@@ -49,8 +49,6 @@ class AzureCache:
                 self._last_access.pop(key, None)
 
     def get_cache(self):
-        if not self._cache:
-            self.initialize_cache()
         return self._cache
 
     def get_cache_value(self, key):
@@ -120,6 +118,14 @@ class AzureCache:
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
+# Initialize Azure-specific cache
+azure_cache = AzureCache()
+cache = azure_cache.get_cache()
+
+# Register cleanup
+atexit.register(azure_cache.clear_cache)
+
+
 def azure_cache_decorator(ttl=3600):
     """
     Decorator for caching function results with configurable TTL.
@@ -155,12 +161,7 @@ def azure_cache_decorator(ttl=3600):
         return wrapper
     return decorator
 
-# Initialize Azure-specific cache
-azure_cache = AzureCache()
-cache = azure_cache.get_cache()
 
-# Register cleanup
-atexit.register(azure_cache.clear_cache)
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
