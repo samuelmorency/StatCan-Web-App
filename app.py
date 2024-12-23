@@ -24,6 +24,10 @@ import io
 import csv
 import hashlib
 from dash_ag_grid import AgGrid
+from time import perf_counter
+from functools import wraps
+import threading
+from collections import defaultdict
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -453,6 +457,77 @@ def load_and_process_educational_data():
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
 
+# Add performance monitoring decorator
+def monitor_performance(func):
+    metrics = defaultdict(list)
+    
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = perf_counter()
+        result = func(*args, **kwargs)
+        execution_time = perf_counter() - start_time
+        metrics[func.__name__].append(execution_time)
+        
+        # Log average performance every 10 calls
+        if len(metrics[func.__name__]) >= 10:
+            avg_time = sum(metrics[func.__name__]) / len(metrics[func.__name__])
+            logger.info(f"{func.__name__} average execution time: {avg_time:.4f}s")
+            metrics[func.__name__] = []
+            
+        return result
+    return wrapper
+
+# Add optimized filtering class
+class FilterOptimizer:
+    def __init__(self, data):
+        self._data = data
+        self._cache = {}
+        self._index_cache = {}
+        self._last_filter_hash = None
+        
+    def _create_filter_hash(self, filters):
+        """Create a unique hash for the current filter combination"""
+        return hashlib.md5(str(sorted(filters.items())).encode()).hexdigest()
+    
+    def _create_index(self, column):
+        """Create and cache index for faster filtering"""
+        if column not in self._index_cache:
+            self._index_cache[column] = self._data.index.get_level_values(column)
+        return self._index_cache[column]
+    
+    @monitor_performance
+    def filter_data(self, filters):
+        """Optimized filtering with caching and vectorized operations"""
+        filter_hash = self._create_filter_hash(filters)
+        
+        # Return cached result if available
+        if filter_hash == self._last_filter_hash and filter_hash in self._cache:
+            return self._cache[filter_hash]
+            
+        # Create initial mask
+        mask = pd.Series(True, index=self._data.index)
+        
+        # Apply filters using vectorized operations
+        for col, values in filters.items():
+            if values:
+                idx = self._create_index(col)
+                mask &= idx.isin(values)
+        
+        # Cache and return result
+        filtered_data = self._data[mask]
+        self._cache[filter_hash] = filtered_data
+        self._last_filter_hash = filter_hash
+        
+        # Limit cache size
+        if len(self._cache) > 10:
+            oldest_key = next(iter(self._cache))
+            del self._cache[oldest_key]
+            
+        return filtered_data
+
+# Initialize the optimizer after loading data
+filter_optimizer = FilterOptimizer(data)
+
 def filter_data(data, filters):
     """
     Filters the multi-indexed DataFrame using direct indexing. The filters dictionary
@@ -477,6 +552,7 @@ def filter_data(data, filters):
     return data[mask]
 
 @azure_cache_decorator(ttl=300)  # 5 minutes - results depend on user filters
+@monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions, selected_cmas):
     """
@@ -512,22 +588,38 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
         'DGUID': set()
     }
 
-    filtered_data = filter_data(data, filters)
+    # Use optimized filtering
+    filtered_data = filter_optimizer.filter_data(filters)
     if filtered_data.empty:
         return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Vectorized operations for aggregations
-    aggregations = {
-        'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
-        'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
-        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
-    }
+    # Optimize aggregations with parallel processing for large datasets
+    if len(filtered_data) > 100000:
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_cma = executor.submit(lambda: filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum())
+            future_isced = executor.submit(lambda: filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum())
+            future_province = executor.submit(lambda: filtered_data.groupby("Province_Territory", observed=True)['value'].sum())
+            
+            cma_grads = future_cma.result().reset_index(name='graduates')
+            isced_grads = future_isced.result().reset_index(name='graduates')
+            province_grads = future_province.result().reset_index(name='graduates')
+    else:
+        # Use regular aggregations for smaller datasets
+        aggregations = {
+            'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
+            'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
+            'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
+        }
+        
+        cma_grads = aggregations['cma'].reset_index(name='graduates')
+        isced_grads = aggregations['isced'].reset_index(name='graduates')
+        province_grads = aggregations['province'].reset_index(name='graduates')
 
     return (
         filtered_data.reset_index(),
-        aggregations['cma'].reset_index(name='graduates'),
-        aggregations['isced'].reset_index(name='graduates'),
-        aggregations['province'].reset_index(name='graduates')
+        cma_grads,
+        isced_grads,
+        province_grads
     )
 
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):

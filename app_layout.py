@@ -230,7 +230,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                                 "minWidth": 125,
                                 "filterParams": {
                                     "buttons": ["reset", "apply"],
-                                    "debounceMs": 200
+                                    "debounceMs": 500  # Increased debounce time
                                 },
                                 "enableValue": True,
                                 "enablePivot": True,
@@ -242,17 +242,12 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                                 "pagination": True,
                                 "paginationPageSize": 100,
                                 "cacheBlockSize": 100,
-                                "rowBuffer": 100,
-                                "animateRows": True,
-                                "domLayout": 'autoHeight',
-                                "enableCharts": True,
-                                "enableRangeSelection": True,
-                                "statusBar": {
-                                    "statusPanels": [
-                                        {"statusPanel": "agTotalAndFilteredRowCountComponent"},
-                                        {"statusPanel": "agAggregationComponent"}
-                                    ]
-                                }
+                                "rowBuffer": 50,
+                                "maxBlocksInCache": 10,
+                                "rowModelType": "clientSide",
+                                "enableCellTextSelection": True,
+                                "ensureDomOrder": False,
+                                "suppressAnimationFrame": True
                             },
                             columnSize="sizeToFit",
                             enableEnterpriseModules=True,
