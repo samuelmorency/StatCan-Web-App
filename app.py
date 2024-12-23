@@ -972,43 +972,22 @@ def monitor_cache_usage():
     Output('table-cma', 'data'),
     Output('table-cma', 'columns'),
     Output('map', 'viewport'),
+    Output('column-selector', 'options'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
     Input('prov-filter', 'value'),
     Input('isced-filter', 'value'),
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
-    Input('cma-filter', 'value'),  # Add CMA filter input
+    Input('cma-filter', 'value'),
     Input('selected-isced', 'data'),
     Input('selected-province', 'data'),
     Input('selected-cma', 'data'),
-    State('map', 'viewport')
+    State('map', 'viewport'),
+    prevent_initial_call=True
 )
 def update_visualizations(*args):
-    """
-    The primary callback that responds to user input changes from filters, charts,
-    and map selections. It:
-    - Filters and preprocesses the data based on selected criteria.
-    - Applies cross-filtering based on the currently selected ISCED level, province,
-      and CMA/CA feature.
-    - Updates the GeoJSON map layer, ISCED chart, province chart, and the CMA/CA table.
-    - Adjusts the map viewport if needed.
-
-    If no data matches the filters or an error occurs, it returns empty structures.
-
-    Args:
-        *args: A list of inputs including filter values, chart types, selected ISCED,
-               selected province, selected CMA, and the current map viewport.
-
-    Returns:
-        tuple: A tuple of updated components for the map, charts, table, and viewport.
-               - GeoJSON data for the map
-               - Figure for ISCED chart
-               - Figure for province chart
-               - Data for the CMA/CA table
-               - Columns for the CMA/CA table
-               - Updated viewport settings
-    """
+    """Update all visualizations except table columns"""
     try:
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
@@ -1130,7 +1109,12 @@ def update_visualizations(*args):
         
         # Prepare table data
         table_data = cma_grads.sort_values('graduates', ascending=False).to_dict('records')
-        table_columns = [{"name": i, "id": i} for i in cma_grads.columns]
+        
+        # Prepare table columns based on selection
+        table_columns = [{"name": col, "id": col} for col in cma_grads.columns]
+        
+        # Update column selector options
+        available_columns = [{"label": col, "value": col} for col in cma_grads.columns]
         
         # Monitor cache at the start of major updates
         monitor_cache_usage()
@@ -1141,12 +1125,34 @@ def update_visualizations(*args):
             fig_province,
             table_data,
             table_columns,
-            viewport_output
+            viewport_output,
+            available_columns
         )
         
     except Exception as e:
         logger.error(f"Error in update_visualizations: {str(e)}")
-        return create_empty_response()
+        return (*create_empty_response(), [])  # Add empty list for column options
+
+@app.callback(
+    Output('table-cma', 'columns', allow_duplicate=True),
+    Input('column-selector', 'value'),
+    prevent_initial_call=True
+)
+def update_table_columns(selected_columns):
+    """
+    Updates only the visible columns in the table based on user selection.
+    
+    Args:
+        selected_columns (list): List of column ids selected by the user
+        
+    Returns:
+        list: List of column definitions for the DataTable
+    """
+    if not selected_columns:
+        # Ensure at least one column is always visible
+        selected_columns = ['CMA_CA']
+    
+    return [{"name": col, "id": col} for col in selected_columns]
 
 @app.callback(
     Output('stem-bhase-filter', 'value'),
@@ -1257,32 +1263,35 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     Output("download-data", "data"),
     Input("download-button", "n_clicks"),
     State("table-cma", "data"),
+    State("column-selector", "value"),
     prevent_initial_call=True,
 )
-def download_table(n_clicks, table_data):
+def download_table(n_clicks, table_data, selected_columns):
     """
-    Handles the download functionality for the table data.
-    Creates a CSV file from the current table data when the download button is clicked.
+    Handles the download functionality for the table data with selected columns only.
     
     Args:
         n_clicks (int): Number of times the download button has been clicked
         table_data (list): List of dictionaries containing the current table data
+        selected_columns (list): List of columns selected for display
         
     Returns:
         dict: Dictionary containing the file content and metadata for download
     """
-    if not n_clicks or not table_data:
+    if not n_clicks or not table_data or not selected_columns:
         raise PreventUpdate
+
+    # Filter the data to include only selected columns
+    filtered_data = [{col: row[col] for col in selected_columns} for row in table_data]
 
     # Create a CSV string buffer
     string_buffer = io.StringIO()
-    writer = csv.DictWriter(string_buffer, fieldnames=table_data[0].keys())
+    writer = csv.DictWriter(string_buffer, fieldnames=selected_columns)
     
     # Write the header and data
     writer.writeheader()
-    writer.writerows(table_data)
+    writer.writerows(filtered_data)
     
-    # Return the CSV file
     return dict(
         content=string_buffer.getvalue(),
         filename=f"graduates_by_cma_ca_{time.strftime('%Y%m%d_%H%M%S')}.csv",

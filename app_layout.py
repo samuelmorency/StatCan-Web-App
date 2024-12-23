@@ -25,9 +25,15 @@ button_format = {
     #"margin-right": "10px"
 }
 
+default_columns = [
+    {'name': 'CMA_CA', 'value': 'CMA_CA', 'selected': True},
+    {'name': 'DGUID', 'value': 'DGUID', 'selected': True},
+    {'name': 'graduates', 'value': 'graduates', 'selected': True}
+]
+
 table = dash_table.DataTable(
     id='table-cma',
-    columns=[],  # Placeholder for table columns
+    columns=[],  # Will be populated by callback
     data=[],  # Placeholder for table data
     style_table={'height': '400px', 'overflowY': 'auto'},
     style_cell={
@@ -130,6 +136,12 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
+    # Modify the column selector dropdown style
+    column_selector_style = {
+        "width": "100%",
+        "marginBottom": "10px"
+    }
+    
     # Create the app layout
     app_layout = dbc.Container([
         dbc.Row([
@@ -226,7 +238,18 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                 dbc.Card([
                     dbc.CardHeader(
                         dbc.Row([
-                            dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
+                            dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=6),
+                            dbc.Col(
+                                dcc.Dropdown(
+                                    id='column-selector',
+                                    options=[{'label': col['name'], 'value': col['value']} for col in default_columns],
+                                    value=[col['value'] for col in default_columns if col['selected']],
+                                    multi=True,
+                                    placeholder="Select columns to display",
+                                    style=column_selector_style
+                                ),
+                                width=3
+                            ),
                             dbc.Col(
                                 html.Button("Download Table",**download_button_args),
                                 width=3
