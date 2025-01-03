@@ -99,7 +99,8 @@ def button_args(id, background_color, color, format):
         }
     }
 
-def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):  # Add parameter
+def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
+    # ...existing code...
     stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = filter_args("year-filter", year_options_full, checklist_format)
     prov_args = filter_args("prov-filter", prov_options_full, multi_dropdown_format)
@@ -111,18 +112,8 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
-    # Create the app layout
-    app_layout = dbc.Container([
-        dbc.Row([
-            dbc.Col(
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
-                        html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
-                    ])
-                ], className="mb-4 border-0"),
-            width=12)
-        ]),
+    visualization_content = html.Div([
+        # Filters button
         dbc.Row(
             dbc.Col(
                 dbc.Button(
@@ -134,6 +125,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                 ), width="auto"
             )
         ),
+        # Main content row with filters and visualizations
         dbc.Row([
             dbc.Col([
                 html.Div(
@@ -147,7 +139,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                                 dcc.Checklist(**year_args),
                                 html.Label("Province:"),
                                 dcc.Dropdown(**prov_args),
-                                html.Label("Census Metropolitan Area/Census Agglomeration:"),  # Add these lines
+                                html.Label("Census Metropolitan Area/Census Agglomeration:"),
                                 dcc.Dropdown(**cma_args),
                                 html.Label("ISCED Level:"),
                                 dcc.Dropdown(**isced_args),
@@ -157,12 +149,11 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                                 dcc.Dropdown(**institution_args),
                                 html.Button('Reset Filters', **reset_filters_args),
                                 html.Button('Clear Selection', **clear_selection_args),
-                                # Store selected data for cross-filtering
                                 dcc.Store(id='selected-isced', data=None),
                                 dcc.Store(id='selected-province', data=None),
                                 dcc.Store(id='selected-cma', data=None),
                             ])
-                            ], className="mb-4 h-100"),
+                        ], className="mb-4 h-100"),
                         id="horizontal-collapse",
                         is_open=True,
                         dimension="width",
@@ -170,12 +161,14 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                 )
             ], width="auto"),
             dbc.Col([
+                # Map card
                 dbc.Card([
                     dbc.CardHeader("Graduates by CMA/CA"),
                     dbc.CardBody([
                         dl.Map(**map_args),
                     ])
                 ], className="mb-4"),
+                # Charts row
                 dbc.Row([
                     dbc.Col([
                         dbc.Card([
@@ -202,62 +195,77 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
                         ])
                     ], width=6)
                 ], className="mb-4"),
-
-                # Add download button and table section
-                dbc.Card([
-                    dbc.CardHeader(
-                        dbc.Row([
-                            dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
-                            dbc.Col(
-                                html.Button("Download Table",**download_button_args),
-                                width=3
-                            ),
-                        ]),
-                        className="d-flex align-items-center"
-                    ),
-                    dbc.CardBody([
-                        # Add download component (hidden)
-                        dcc.Download(id="download-data"),
-                        # Replace the dash_table.DataTable with AgGrid
-                        AgGrid(
-                            id='table-cma',
-                            columnDefs=[],
-                            rowData=[],
-                            defaultColDef={
-                                "resizable": True,
-                                "sortable": True,
-                                "filter": True,
-                                "minWidth": 125,
-                                "filterParams": {
-                                    "buttons": ["reset", "apply"],
-                                    "debounceMs": 500  # Increased debounce time
-                                },
-                                "enableValue": True,
-                                "enablePivot": True,
-                                "enableRowGroup": True
-                            },
-                            dashGridOptions={
-                                "groupDisplayType": "groupRows",
-                                "rowSelection": "multiple",
-                                "pagination": True,
-                                "paginationPageSize": 100,
-                                "cacheBlockSize": 100,
-                                "rowBuffer": 50,
-                                "maxBlocksInCache": 10,
-                                "rowModelType": "clientSide",
-                                "enableCellTextSelection": True,
-                                "ensureDomOrder": False,
-                                "suppressAnimationFrame": True
-                            },
-                            columnSize="sizeToFit",
-                            enableEnterpriseModules=True,
-                            className="ag-theme-alpine",
-                            style={"height": "600px", "width": "100%"},
-                        )
-                    ])
-                ], className="mb-4"),
             ], width=9)
         ])
+    ])
+
+    table_content = dbc.Card([
+        dbc.CardHeader(
+            dbc.Row([
+                dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
+                dbc.Col(
+                    html.Button("Download Table", **download_button_args),
+                    width=3
+                ),
+            ]),
+            className="d-flex align-items-center"
+        ),
+        dbc.CardBody([
+            dcc.Download(id="download-data"),
+            AgGrid(
+                id='table-cma',
+                columnDefs=[],
+                rowData=[],
+                defaultColDef={
+                    "resizable": True,
+                    "sortable": True,
+                    "filter": True,
+                    "minWidth": 125,
+                    "filterParams": {
+                        "buttons": ["reset", "apply"],
+                        "debounceMs": 500
+                    },
+                    "enableValue": True,
+                    "enablePivot": True,
+                    "enableRowGroup": True
+                },
+                dashGridOptions={
+                    "groupDisplayType": "groupRows",
+                    "rowSelection": "multiple",
+                    "pagination": True,
+                    "paginationPageSize": 100,
+                    "cacheBlockSize": 100,
+                    "rowBuffer": 50,
+                    "maxBlocksInCache": 10,
+                    "rowModelType": "clientSide",
+                    "enableCellTextSelection": True,
+                    "ensureDomOrder": False,
+                    "suppressAnimationFrame": True
+                },
+                columnSize="sizeToFit",
+                enableEnterpriseModules=True,
+                className="ag-theme-alpine",
+                style={"height": "600px", "width": "100%"},
+            )
+        ])
+    ], className="mb-4")
+
+    # Create the app layout with tabs
+    app_layout = dbc.Container([
+        dbc.Row([
+            dbc.Col(
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
+                        html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
+                    ])
+                ], className="mb-4 border-0"),
+            width=12)
+        ]),
+        dbc.Tabs([
+            dbc.Tab(visualization_content, label="Visualization", tab_id="tab-visualization"),
+            dbc.Tab(table_content, label="Data Table", tab_id="tab-data"),
+        ], id="tabs", active_tab="tab-visualization"),
     ], fluid=True)
 
     return app_layout
