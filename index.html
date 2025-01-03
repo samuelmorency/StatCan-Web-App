@@ -5,6 +5,26 @@
         <title>{%title%}</title>
         {%favicon%}
         {%css%}
+        <!-- Add pivot table styles -->
+        <style>
+            .pvtTable {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                border-collapse: collapse;
+            }
+            .pvtTable td, .pvtTable th {
+                padding: 8px;
+                border: 1px solid #ddd;
+            }
+            .pvtTotal, .pvtGrandTotal {
+                font-weight: bold;
+                background-color: #f5f5f5;
+            }
+            .pvtAxisContainer, .pvtVals {
+                background-color: #f8f9fa;
+                padding: 5px;
+            }
+        </style>
         <!-- Add client-side processing script -->
         <script src="/assets/clientProcessing.js"></script>
     </head>

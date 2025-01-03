@@ -3,7 +3,7 @@ from dash import html, dcc, dash_table
 import brand_colours as bc
 from dash_extensions.javascript import assign
 import dash_leaflet as dl
-from dash_ag_grid import AgGrid
+from dash_pivottable import PivotTable
 
 checklist_format = {
     "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
@@ -99,110 +99,20 @@ def button_args(id, background_color, color, format):
         }
     }
 
-def initialize_ag_grid(data):
-    """Initialize AG Grid with the full dataset"""
-    column_defs = [
-        {
-            "field": "STEM/BHASE",
-            "headerName": "Category",
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "field": "year",
-            "headerName": "Year",
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "field": "Province_Territory",
-            "headerName": "Province/Territory",
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "field": "CMA_CA",
-            "headerName": "CMA/CA",
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "headerName": "Education Level",
-            "valueGetter": {
-                "function": """
-                const isced = params.data.ISCED_level_of_education;
-                const cred = params.data.Credential_Type;
-                return `${isced} (${cred})`;
-                """
-            },
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "field": "Institution",
-            "headerName": "Institution",
-            "enableRowGroup": True,
-            "filter": 'agSetColumnFilter',
-        },
-        {
-            "field": "value",
-            "headerName": "Graduates",
-            "type": "numericColumn",
-            "enableValue": True,
-            "valueGetter": {
-                "function": "Number(params.data.value).toLocaleString()"
-            },
-            "aggFunc": "sum",
-            "filter": "agNumberColumnFilter",
-        },
-        {
-            "headerName": "% of Total",
-            "type": "numericColumn",
-            "valueGetter": {
-                "function": """
-                const total = params.api.getModel().rootNode.childrenAfterFilter
-                    .reduce((sum, node) => sum + Number(node.data.value), 0);
-                return ((params.data.value / total) * 100).toFixed(1) + '%';
-                """
-            },
-            "filter": "agNumberColumnFilter",
-        }
-    ]
-    
-    return AgGrid(
-        id='table-cma',
-        columnDefs=column_defs,
-        rowData=data.reset_index().to_dict('records'),
-        defaultColDef={
-            "resizable": True,
-            "sortable": True,
-            "filter": True,
-            "minWidth": 125,
-            "filterParams": {
-                "buttons": ["reset", "apply"],
-                "debounceMs": 500
-            },
-            "enableValue": True,
-            "enablePivot": True,
-            "enableRowGroup": True
-        },
-        dashGridOptions={
-            "groupDisplayType": "groupRows",
-            "rowSelection": "multiple",
-            "pagination": True,
-            "paginationPageSize": 100,
-            "cacheBlockSize": 100,
-            "rowBuffer": 50,
-            "maxBlocksInCache": 10,
-            "rowModelType": "clientSide",
-            "enableCellTextSelection": True,
-            "ensureDomOrder": False,
-            "suppressAnimationFrame": True
-        },
-        columnSize="sizeToFit",
-        enableEnterpriseModules=True,
-        className="ag-theme-alpine",
-        style={"height": "600px", "width": "100%"}
+def initialize_pivot_table(data):
+    """Initialize Pivot Table with the dataset"""
+    return PivotTable(
+        id='pivot-table',
+        data=data.reset_index().to_dict('records'),
+        cols=['year'],
+        rows=['Province_Territory', 'CMA_CA'],
+        vals=['value'],
+        aggregatorName='Sum',
+        rendererName='Table',
+        colOrder='key_a_to_z',
+        rowOrder='key_a_to_z',
+        menuLimit=2000,
+        unusedOrientationCutoff=10000
     )
 
 def create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
@@ -308,9 +218,9 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     table_content = dbc.Card([
         dbc.CardHeader(
             dbc.Row([
-                dbc.Col(html.H3("Number of Graduates by CMA/CA"), width=9),
+                dbc.Col(html.H3("Graduate Data Pivot Table"), width=9),
                 dbc.Col(
-                    html.Button("Download Table", **download_button_args),
+                    html.Button("Download Data", **download_button_args),
                     width=3
                 ),
             ]),
@@ -318,7 +228,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         ),
         dbc.CardBody([
             dcc.Download(id="download-data"),
-            initialize_ag_grid(data)  # Pass the full dataset to AG Grid
+            initialize_pivot_table(data)  # Pass the dataset to pivot table
         ])
     ], className="mb-4")
 

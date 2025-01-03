@@ -709,8 +709,7 @@ def create_empty_response():
                - Empty geojson data (dict)
                - Empty figure for ISCED chart (dict)
                - Empty figure for province chart (dict)
-               - Empty data for the table (list)
-               - Empty columns for the table (list)
+               - Empty lists for table data and columns (list, list)
                - A default viewport dictionary with bounds and transition
     """
     empty_geojson = {'type': 'FeatureCollection', 'features': []}
@@ -1318,36 +1317,43 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
 @app.callback(
     Output("download-data", "data"),
     Input("download-button", "n_clicks"),
-    State("table-cma", "rowData"),
+    State("pivot-table", "pivotData"),
     prevent_initial_call=True,
 )
-def download_table(n_clicks, row_data):
+def download_pivot_data(n_clicks, pivot_data):
     """
-    Handles the download functionality for the table data.
-    Creates a CSV file from the current table data when the download button is clicked.
+    Handles the download functionality for the pivot table data.
     
     Args:
         n_clicks (int): Number of times the download button has been clicked
-        row_data (list): List of dictionaries containing the current table data
+        pivot_data (dict): Current pivot table data structure
         
     Returns:
         dict: Dictionary containing the file content and metadata for download
     """
-    if not n_clicks or not row_data:
+    if not n_clicks or not pivot_data:
         raise PreventUpdate
+
+    # Convert pivot data to flat structure
+    rows = []
+    for row_key in pivot_data:
+        for col_key in pivot_data[row_key]:
+            rows.append({
+                'Row': row_key,
+                'Column': col_key,
+                'Value': pivot_data[row_key][col_key]
+            })
 
     # Create a CSV string buffer
     string_buffer = io.StringIO()
-    writer = csv.DictWriter(string_buffer, fieldnames=row_data[0].keys())
+    writer = csv.DictWriter(string_buffer, fieldnames=['Row', 'Column', 'Value'])
     
-    # Write the header and data
     writer.writeheader()
-    writer.writerows(row_data)
+    writer.writerows(rows)
     
-    # Return the CSV file
     return dict(
         content=string_buffer.getvalue(),
-        filename=f"graduates_by_cma_ca_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+        filename=f"graduates_pivot_{time.strftime('%Y%m%d_%H%M%S')}.csv",
         type="text/csv",
         base64=False
     )
