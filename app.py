@@ -1317,7 +1317,7 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
 @app.callback(
     Output("download-data", "data"),
     Input("download-button", "n_clicks"),
-    State("pivot-table", "pivotData"),
+    State("pivot-table", "data"),  # Changed from pivotData to data
     prevent_initial_call=True,
 )
 def download_pivot_data(n_clicks, pivot_data):
@@ -1326,7 +1326,7 @@ def download_pivot_data(n_clicks, pivot_data):
     
     Args:
         n_clicks (int): Number of times the download button has been clicked
-        pivot_data (dict): Current pivot table data structure
+        pivot_data (list): Current pivot table data structure
         
     Returns:
         dict: Dictionary containing the file content and metadata for download
@@ -1334,22 +1334,12 @@ def download_pivot_data(n_clicks, pivot_data):
     if not n_clicks or not pivot_data:
         raise PreventUpdate
 
-    # Convert pivot data to flat structure
-    rows = []
-    for row_key in pivot_data:
-        for col_key in pivot_data[row_key]:
-            rows.append({
-                'Row': row_key,
-                'Column': col_key,
-                'Value': pivot_data[row_key][col_key]
-            })
-
     # Create a CSV string buffer
     string_buffer = io.StringIO()
-    writer = csv.DictWriter(string_buffer, fieldnames=['Row', 'Column', 'Value'])
+    writer = csv.DictWriter(string_buffer, fieldnames=pivot_data[0].keys())
     
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows(pivot_data)
     
     return dict(
         content=string_buffer.getvalue(),
