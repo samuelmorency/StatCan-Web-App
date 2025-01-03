@@ -99,7 +99,113 @@ def button_args(id, background_color, color, format):
         }
     }
 
-def create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
+def initialize_ag_grid(data):
+    """Initialize AG Grid with the full dataset"""
+    column_defs = [
+        {
+            "field": "STEM/BHASE",
+            "headerName": "Category",
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "field": "year",
+            "headerName": "Year",
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "field": "Province_Territory",
+            "headerName": "Province/Territory",
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "field": "CMA_CA",
+            "headerName": "CMA/CA",
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "headerName": "Education Level",
+            "valueGetter": {
+                "function": """
+                const isced = params.data.ISCED_level_of_education;
+                const cred = params.data.Credential_Type;
+                return `${isced} (${cred})`;
+                """
+            },
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "field": "Institution",
+            "headerName": "Institution",
+            "enableRowGroup": True,
+            "filter": 'agSetColumnFilter',
+        },
+        {
+            "field": "value",
+            "headerName": "Graduates",
+            "type": "numericColumn",
+            "enableValue": True,
+            "valueGetter": {
+                "function": "Number(params.data.value).toLocaleString()"
+            },
+            "aggFunc": "sum",
+            "filter": "agNumberColumnFilter",
+        },
+        {
+            "headerName": "% of Total",
+            "type": "numericColumn",
+            "valueGetter": {
+                "function": """
+                const total = params.api.getModel().rootNode.childrenAfterFilter
+                    .reduce((sum, node) => sum + Number(node.data.value), 0);
+                return ((params.data.value / total) * 100).toFixed(1) + '%';
+                """
+            },
+            "filter": "agNumberColumnFilter",
+        }
+    ]
+    
+    return AgGrid(
+        id='table-cma',
+        columnDefs=column_defs,
+        rowData=data.reset_index().to_dict('records'),
+        defaultColDef={
+            "resizable": True,
+            "sortable": True,
+            "filter": True,
+            "minWidth": 125,
+            "filterParams": {
+                "buttons": ["reset", "apply"],
+                "debounceMs": 500
+            },
+            "enableValue": True,
+            "enablePivot": True,
+            "enableRowGroup": True
+        },
+        dashGridOptions={
+            "groupDisplayType": "groupRows",
+            "rowSelection": "multiple",
+            "pagination": True,
+            "paginationPageSize": 100,
+            "cacheBlockSize": 100,
+            "rowBuffer": 50,
+            "maxBlocksInCache": 10,
+            "rowModelType": "clientSide",
+            "enableCellTextSelection": True,
+            "ensureDomOrder": False,
+            "suppressAnimationFrame": True
+        },
+        columnSize="sizeToFit",
+        enableEnterpriseModules=True,
+        className="ag-theme-alpine",
+        style={"height": "600px", "width": "100%"}
+    )
+
+def create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
     # ...existing code...
     stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = filter_args("year-filter", year_options_full, checklist_format)
@@ -212,41 +318,7 @@ def create_layout(stem_bhase_options_full, year_options_full, prov_options_full,
         ),
         dbc.CardBody([
             dcc.Download(id="download-data"),
-            AgGrid(
-                id='table-cma',
-                columnDefs=[],
-                rowData=[],
-                defaultColDef={
-                    "resizable": True,
-                    "sortable": True,
-                    "filter": True,
-                    "minWidth": 125,
-                    "filterParams": {
-                        "buttons": ["reset", "apply"],
-                        "debounceMs": 500
-                    },
-                    "enableValue": True,
-                    "enablePivot": True,
-                    "enableRowGroup": True
-                },
-                dashGridOptions={
-                    "groupDisplayType": "groupRows",
-                    "rowSelection": "multiple",
-                    "pagination": True,
-                    "paginationPageSize": 100,
-                    "cacheBlockSize": 100,
-                    "rowBuffer": 50,
-                    "maxBlocksInCache": 10,
-                    "rowModelType": "clientSide",
-                    "enableCellTextSelection": True,
-                    "ensureDomOrder": False,
-                    "suppressAnimationFrame": True
-                },
-                columnSize="sizeToFit",
-                enableEnterpriseModules=True,
-                className="ag-theme-alpine",
-                style={"height": "600px", "width": "100%"},
-            )
+            initialize_ag_grid(data)  # Pass the full dataset to AG Grid
         ])
     ], className="mb-4")
 

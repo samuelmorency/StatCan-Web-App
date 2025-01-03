@@ -776,7 +776,7 @@ institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(da
 app.layout = html.Div([
     dcc.Store(id='client-data-store', storage_type='session'),
     dcc.Store(id='client-filters-store', storage_type='local'),
-    create_layout(stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
+    create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
 ])
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
@@ -1041,8 +1041,6 @@ def monitor_cache_usage():
     Output('cma-geojson', 'data'),
     Output('graph-isced', 'figure'),
     Output('graph-province', 'figure'),
-    Output('table-cma', 'rowData'),  # Changed from 'data'
-    Output('table-cma', 'columnDefs'),  # Changed from 'columns'
     Output('map', 'viewport'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
@@ -1077,8 +1075,6 @@ def update_visualizations(*args):
                - GeoJSON data for the map
                - Figure for ISCED chart
                - Figure for province chart
-               - Data for the CMA/CA table
-               - Columns for the CMA/CA table
                - Updated viewport settings
     """
     try:
@@ -1200,78 +1196,6 @@ def update_visualizations(*args):
             selected_province
         )
         
-        # Prepare table data - show raw filtered data instead of CMA aggregations
-        # Update column definitions with enhanced features
-        column_defs = [
-            {
-                "field": "STEM/BHASE",
-                "headerName": "Category",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "field": "year",
-                "headerName": "Year",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "field": "Province_Territory",
-                "headerName": "Province/Territory",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "field": "CMA_CA",
-                "headerName": "CMA/CA",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "headerName": "Education Level",
-                "valueGetter": {
-                    "function": """
-                    const isced = params.data.ISCED_level_of_education;
-                    const cred = params.data.Credential_Type;
-                    return `${isced} (${cred})`;
-                    """
-                },
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "field": "Institution",
-                "headerName": "Institution",
-                "enableRowGroup": True,
-                "filter": 'agSetColumnFilter',
-            },
-            {
-                "field": "value",
-                "headerName": "Graduates",
-                "type": "numericColumn",
-                "enableValue": True,
-                "valueGetter": {
-                    "function": "Number(params.data.value).toLocaleString()"
-                },
-                "aggFunc": "sum",
-                "filter": "agNumberColumnFilter",
-            },
-            {
-                "headerName": "% of Total",
-                "type": "numericColumn",
-                "valueGetter": {
-                    "function": """
-                    const total = params.api.getModel().rootNode.childrenAfterFilter
-                        .reduce((sum, node) => sum + Number(node.data.value), 0);
-                    return ((params.data.value / total) * 100).toFixed(1) + '%';
-                    """
-                },
-                "filter": "agNumberColumnFilter",
-            }
-        ]
-
-        row_data = filtered_data.reset_index().to_dict('records')
-        
         # Monitor cache at the start of major updates
         monitor_cache_usage()
         
@@ -1279,8 +1203,6 @@ def update_visualizations(*args):
             geojson_data,
             fig_isced,
             fig_province,
-            row_data,  # Changed from table_data
-            column_defs,  # Changed from table_columns
             viewport_output
         )
         
