@@ -181,7 +181,11 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Card([
                     dbc.CardHeader("Graduates by CMA/CA"),
                     dbc.CardBody([
-                        dl.Map(**map_args),
+                        dbc.Spinner(
+                            dl.Map(**map_args),
+                            color="primary",
+                            type="border",
+                            ),
                     ])
                 ], className="mb-4"),
                 # Charts row
