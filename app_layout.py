@@ -107,7 +107,7 @@ def initialize_pivot_table(data):
         cols=['year'],
         rows=['Province_Territory', 'CMA_CA'],
         vals=['value'],
-        aggregatorName='Sum',
+        aggregatorName='Integer Sum',
         rendererName='Table',
         colOrder='key_a_to_z',
         rowOrder='key_a_to_z',
@@ -249,8 +249,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             width=12)
         ]),
         dbc.Tabs([
-            dbc.Tab(visualization_content, label="Visualization", tab_id="tab-visualization"),
-            dbc.Tab(table_content, label="Data Table", tab_id="tab-data"),
+            dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization"),
+            dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data"),
         ], id="tabs", active_tab="tab-visualization"),
     ], fluid=True)
 
