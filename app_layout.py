@@ -129,22 +129,18 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
     visualization_content = html.Div([
-        # Filters button
-        dbc.Row(
-            dbc.Col(
-                dbc.Button(
-                    "Show/hide filters",
-                    id="horizontal-collapse-button",
-                    className="mb-3",
-                    color="primary",
-                    n_clicks=0,
-                ), width="auto"
-            )
-        ),
         # Main content row with filters and visualizations
         dbc.Row([
             dbc.Col([
-                html.Div(
+                html.Div([
+                    # Filters button
+                    dbc.Button(
+                        "Show/hide filters",
+                        id="horizontal-collapse-button",
+                        className="mb-3",
+                        color="primary",
+                        n_clicks=0,
+                    ),
                     dbc.Collapse(
                         dbc.Card([
                             dbc.CardHeader("Filters"),
@@ -173,7 +169,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                         id="horizontal-collapse",
                         is_open=True,
                         dimension="width",
-                    ), className="sticky-top"
+                    )], className="sticky-top"
                 )
             ], width="auto"),
             dbc.Col([
