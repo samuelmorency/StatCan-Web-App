@@ -128,92 +128,88 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
+    filters_button = dbc.Button(
+        "Show/hide filters",
+        id="horizontal-collapse-button",
+        className="mb-3",
+        color="primary",
+        n_clicks=0,
+    )
+    
+    filters_section = dbc.Collapse(
+        dbc.Card([
+            dbc.CardHeader("Filters"),
+            dbc.CardBody([
+                html.Label("STEM/BHASE:"),
+                dcc.Checklist(**stem_bhase_args),
+                html.Label("Academic Year:"),
+                dcc.Checklist(**year_args),
+                html.Label("Province:"),
+                dcc.Dropdown(**prov_args),
+                html.Label("Census Metropolitan Area/Census Agglomeration:"),
+                dcc.Dropdown(**cma_args),
+                html.Label("ISCED Level:"),
+                dcc.Dropdown(**isced_args),
+                html.Label("Credential Type:"),
+                dcc.Dropdown(**credential_args),
+                html.Label("Institution:"),
+                dcc.Dropdown(**institution_args),
+                html.Button('Reset Filters', **reset_filters_args),
+                html.Button('Clear Selection', **clear_selection_args),
+                dcc.Store(id='selected-isced', data=None),
+                dcc.Store(id='selected-province', data=None),
+                dcc.Store(id='selected-cma', data=None),
+            ])
+        ], className="mb-4 h-100"),
+        id="horizontal-collapse",
+        is_open=True,
+        dimension="width",
+    )
+    
+    map_card = dbc.Card([
+        dbc.CardHeader("Graduates by CMA/CA"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dl.Map(**map_args),
+                color="primary",
+                type="border",
+                ),
+        ])
+    ], className="mb-4")
+    
+    isced_card = dbc.Card([
+        dbc.CardHeader("ISCED Level Distribution"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dcc.Graph(id='graph-isced'),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ])
+    
+    province_card = dbc.Card([
+        dbc.CardHeader("Provincial Distribution"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dcc.Graph(id='graph-province'),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ])
+    
     visualization_content = html.Div([
         # Filters button
-        dbc.Row(
-            dbc.Col(
-                dbc.Button(
-                    "Show/hide filters",
-                    id="horizontal-collapse-button",
-                    className="mb-3",
-                    color="primary",
-                    n_clicks=0,
-                ), width="auto"
-            )
-        ),
+        dbc.Row(dbc.Col(filters_button, width="auto")),
         # Main content row with filters and visualizations
         dbc.Row([
+            dbc.Col([html.Div(filters_section, className="sticky-top")], width="auto"),
             dbc.Col([
-                html.Div(
-                    dbc.Collapse(
-                        dbc.Card([
-                            dbc.CardHeader("Filters"),
-                            dbc.CardBody([
-                                html.Label("STEM/BHASE:"),
-                                dcc.Checklist(**stem_bhase_args),
-                                html.Label("Academic Year:"),
-                                dcc.Checklist(**year_args),
-                                html.Label("Province:"),
-                                dcc.Dropdown(**prov_args),
-                                html.Label("Census Metropolitan Area/Census Agglomeration:"),
-                                dcc.Dropdown(**cma_args),
-                                html.Label("ISCED Level:"),
-                                dcc.Dropdown(**isced_args),
-                                html.Label("Credential Type:"),
-                                dcc.Dropdown(**credential_args),
-                                html.Label("Institution:"),
-                                dcc.Dropdown(**institution_args),
-                                html.Button('Reset Filters', **reset_filters_args),
-                                html.Button('Clear Selection', **clear_selection_args),
-                                dcc.Store(id='selected-isced', data=None),
-                                dcc.Store(id='selected-province', data=None),
-                                dcc.Store(id='selected-cma', data=None),
-                            ])
-                        ], className="mb-4 h-100"),
-                        id="horizontal-collapse",
-                        is_open=True,
-                        dimension="width",
-                    ), className="sticky-top"
-                )
-            ], width="auto"),
-            dbc.Col([
-                # Map card
-                dbc.Card([
-                    dbc.CardHeader("Graduates by CMA/CA"),
-                    dbc.CardBody([
-                        dbc.Spinner(
-                            dl.Map(**map_args),
-                            color="primary",
-                            type="border",
-                            ),
-                    ])
-                ], className="mb-4"),
-                # Charts row
+                map_card,
                 dbc.Row([
-                    dbc.Col([
-                        dbc.Card([
-                            dbc.CardHeader("ISCED Level Distribution"),
-                            dbc.CardBody([
-                                dbc.Spinner(
-                                    dcc.Graph(id='graph-isced'),
-                                    color="primary",
-                                    type="border",
-                                ),
-                            ])
-                        ])
-                    ], width=6),
-                    dbc.Col([
-                        dbc.Card([
-                            dbc.CardHeader("Provincial Distribution"),
-                            dbc.CardBody([
-                                dbc.Spinner(
-                                    dcc.Graph(id='graph-province'),
-                                    color="primary",
-                                    type="border",
-                                ),
-                            ])
-                        ])
-                    ], width=6)
+                    dbc.Col([isced_card], width=6),
+                    dbc.Col([province_card], width=6)
                 ], className="mb-4"),
             ])
         ])
@@ -223,10 +219,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader(
             dbc.Row([
                 dbc.Col(html.H3("Graduate Data Pivot Table"), width=9),
-                dbc.Col(
-                    html.Button("Download Data", **download_button_args),
-                    width=3
-                ),
+                dbc.Col(html.Button("Download Data", **download_button_args), width=3),
             ]),
             className="d-flex align-items-center"
         ),
