@@ -131,7 +131,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     filters_button = dbc.Button(
         "Show/hide filters",
         id="horizontal-collapse-button",
-        className="mb-3",
+        className="mb-3 mt-3",
         color="primary",
         n_clicks=0,
     )
