@@ -644,8 +644,20 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
 
 @azure_cache_decorator(ttl=300)  # 5 minutes - visualization data
 def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
-    """Creates a horizontal bar chart."""
-    if dataframe.empty:
+    """
+    Creates a horizontal bar chart with error handling for invalid values.
+
+    Args:
+        dataframe (pd.DataFrame): Data to plot
+        x_column (str): Column name for x-axis
+        y_column (str): Column name for y values
+        x_label (str): Label for chart title
+        selected_value (str, optional): Currently selected value to highlight
+
+    Returns:
+        dict: Plotly figure dictionary or empty dict if data invalid
+    """
+    if dataframe is None or dataframe.empty:
         return {}
     
     sorted_data = dataframe.sort_values(y_column, ascending=True)
