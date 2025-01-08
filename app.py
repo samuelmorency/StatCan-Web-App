@@ -1370,6 +1370,23 @@ def toggle_collapse(n, is_open):
         return not is_open
     return is_open
 
+app.clientside_callback(
+    """
+    function set_event(map_id) {
+        // On resize event 
+        var callback = function() {
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        new ResizeObserver(callback).observe(document.getElementById(map_id))
+
+        return dash_clientside.no_update;
+    }
+    """,
+    Output("map", "id"),
+    Input("map", "id")
+)
+
 if __name__ == '__main__':
     app.run_server(debug=True)
 
