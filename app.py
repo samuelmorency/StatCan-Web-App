@@ -1,21 +1,16 @@
-import tempfile
 import os
 from dash import Dash, html, dcc, callback, Output, Input, State, callback_context, dash_table, Patch, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
-import functools
 import dash_leaflet as dl
 import colorlover as cl
 from dash_extensions.javascript import assign
-import dash
 from dash.exceptions import PreventUpdate
 import time
 import numpy as np
-from functools import lru_cache
 from diskcache import Cache
-import orjson
 import logging
 import atexit
 import brand_colours as bc
@@ -28,6 +23,7 @@ from time import perf_counter
 from functools import wraps
 import threading
 from collections import defaultdict
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -142,7 +138,7 @@ def azure_cache_decorator(ttl=3600):
         function: Decorated function with caching capability
     """
     def decorator(func):
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args, **kwargs):
             try:
                 # Create consistent cache key using hash
@@ -1144,7 +1140,7 @@ def update_visualizations(*args):
                 transition=dict(duration=1000)
             )
         else:
-            viewport_output = dash.no_update
+            viewport_output = no_update
             
         # Create GeoJSON efficiently - updated to use built-in color scale
         max_graduates = cma_data['graduates'].max()
@@ -1357,6 +1353,23 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
+
+app.clientside_callback(
+    """
+    function set_event(map_id) {
+        // On resize event 
+        var callback = function() {
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        new ResizeObserver(callback).observe(document.getElementById(map_id))
+
+        return dash_clientside.no_update;
+    }
+    """,
+    Output("map", "id"),
+    Input("map", "id")
+)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
