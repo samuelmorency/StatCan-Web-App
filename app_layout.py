@@ -141,9 +141,9 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.CardHeader("Filters"),
             dbc.CardBody([
                 html.Label("STEM/BHASE:"),
-                dcc.Checklist(**stem_bhase_args),
+                dcc.Checklist(**stem_bhase_args, inline=True),
                 html.Label("Academic Year:"),
-                dcc.Checklist(**year_args),
+                dcc.Checklist(**year_args, inline=True),
                 html.Label("Province:"),
                 dcc.Dropdown(**prov_args),
                 html.Label("Census Metropolitan Area/Census Agglomeration:"),
@@ -175,7 +175,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
                 ),
         ])
-    ], className="mb-4")
+    ], className="mb-4 mt-4")
     
     isced_card = dbc.Card([
         dbc.CardHeader("ISCED Level Distribution"),
@@ -200,11 +200,13 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ])
     
     visualization_content = html.Div([
-        # Filters button
-        dbc.Row(dbc.Col(filters_button, width="auto")),
+        
         # Main content row with filters and visualizations
         dbc.Row([
-            dbc.Col([html.Div(filters_section, className="sticky-top")], width="auto"),
+            dbc.Col([
+                # Filters button
+                dbc.Row(dbc.Col(filters_button, width="auto")),
+                dbc.Row(html.Div(filters_section, className="sticky-top"))], width="auto"),
             dbc.Col([
                 map_card,
                 dbc.Row([
