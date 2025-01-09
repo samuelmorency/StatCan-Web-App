@@ -1329,41 +1329,71 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
 @app.callback(
     Output("download-data", "data"),
     Input("download-button", "n_clicks"),
-    State("pivot-table", "data"),  # Changed from pivotData to data
+    State("pivot-table", "data"),
+    State("pivot-table", "cols"),
+    State("pivot-table", "rows"),
+    State("pivot-table", "vals"),
     prevent_initial_call=True,
 )
-def download_pivot_data(n_clicks, data):
+def download_pivot_data(n_clicks, data, cols, rows, vals):
     """
-    Handles the download functionality for the pivot table data.
+    Creates a downloadable CSV file from the pivot table's current configuration.
     
     Args:
-        n_clicks (int): Number of times the download button has been clicked
-        data (list): Raw data from the pivot table component
+        n_clicks (int): Number of times download button clicked
+        data (list): The raw data from the pivot table
+        cols (list): Column headers configured in the pivot table
+        rows (list): Row headers configured in the pivot table
+        vals (list): Value fields configured in the pivot table
         
     Returns:
-        dict: Dictionary containing the file content and metadata for download
+        dict: Download specification for Dash
     """
     if not n_clicks or not data:
         raise PreventUpdate
 
     try:
-        # Create a CSV string buffer
-        string_buffer = io.StringIO()
-        writer = csv.writer(string_buffer)
+        # Create a pandas DataFrame from the pivot table data
+        df = pd.DataFrame(data)
         
-        # If data exists as a list of dictionaries
-        if isinstance(data, list) and len(data) > 0:
-            # Write headers
-            headers = list(data[0].keys())
-            writer.writerow(headers)
-            
-            # Write data rows
-            for row in data:
-                writer.writerow([row.get(header, '') for header in headers])
+        # Get unique values for rows and columns
+        row_values = []
+        for row in rows:
+            if row in df.columns:
+                row_values.append(sorted(df[row].unique()))
                 
+        col_values = []
+        for col in cols:
+            if col in df.columns:
+                col_values.append(sorted(df[col].unique()))
+                
+        # Create MultiIndex for rows and columns
+        if row_values:
+            row_index = pd.MultiIndex.from_product(row_values, names=rows)
+        else:
+            row_index = pd.Index([])
+            
+        if col_values:
+            col_index = pd.MultiIndex.from_product(col_values, names=cols)
+        else:
+            col_index = pd.Index([])
+            
+        # Create pivot table
+        pivot_df = df.pivot_table(
+            index=rows if rows else None,
+            columns=cols if cols else None,
+            values=vals,
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        # Convert to string buffer
+        string_buffer = io.StringIO()
+        pivot_df.to_csv(string_buffer)
+        
         return dict(
             content=string_buffer.getvalue(),
-            filename=f"graduates_data_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+            filename=f"graduates_pivot_{time.strftime('%Y%m%d_%H%M%S')}.csv",
             type="text/csv",
             base64=False
         )

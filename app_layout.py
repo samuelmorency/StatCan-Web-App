@@ -221,7 +221,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader(
             dbc.Row([
                 dbc.Col(html.H3("Graduate Data Pivot Table"), width=9),
-                dbc.Col(html.Button("Download Data", **download_button_args), width=3),
+                dbc.Col(html.Button("Export to CSV", **download_button_args), width=3),
             ]),
             className="d-flex align-items-center"
         ),
