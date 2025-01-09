@@ -1332,33 +1332,45 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     State("pivot-table", "data"),  # Changed from pivotData to data
     prevent_initial_call=True,
 )
-def download_pivot_data(n_clicks, pivot_data):
+def download_pivot_data(n_clicks, data):
     """
     Handles the download functionality for the pivot table data.
     
     Args:
         n_clicks (int): Number of times the download button has been clicked
-        pivot_data (list): Current pivot table data structure
+        data (list): Raw data from the pivot table component
         
     Returns:
         dict: Dictionary containing the file content and metadata for download
     """
-    if not n_clicks or not pivot_data:
+    if not n_clicks or not data:
         raise PreventUpdate
 
-    # Create a CSV string buffer
-    string_buffer = io.StringIO()
-    writer = csv.DictWriter(string_buffer, fieldnames=pivot_data[0].keys())
-    
-    writer.writeheader()
-    writer.writerows(pivot_data)
-    
-    return dict(
-        content=string_buffer.getvalue(),
-        filename=f"graduates_pivot_{time.strftime('%Y%m%d_%H%M%S')}.csv",
-        type="text/csv",
-        base64=False
-    )
+    try:
+        # Create a CSV string buffer
+        string_buffer = io.StringIO()
+        writer = csv.writer(string_buffer)
+        
+        # If data exists as a list of dictionaries
+        if isinstance(data, list) and len(data) > 0:
+            # Write headers
+            headers = list(data[0].keys())
+            writer.writerow(headers)
+            
+            # Write data rows
+            for row in data:
+                writer.writerow([row.get(header, '') for header in headers])
+                
+        return dict(
+            content=string_buffer.getvalue(),
+            filename=f"graduates_data_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+            type="text/csv",
+            base64=False
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in download_pivot_data: {str(e)}")
+        raise PreventUpdate
 
 @app.callback(
     Output("horizontal-collapse", "is_open"),
