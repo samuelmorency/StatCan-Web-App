@@ -205,8 +205,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.Row([
             dbc.Col([
                 # Filters button
-                dbc.Row(dbc.Col(filters_button, width="auto")),
-                dbc.Row(html.Div(filters_section, className="sticky-top"))], width="auto"),
+                html.Div([filters_button, dbc.Row(filters_section)], className="sticky-top")], width="auto"),
             dbc.Col([
                 map_card,
                 dbc.Row([
