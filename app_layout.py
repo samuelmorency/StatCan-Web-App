@@ -5,6 +5,8 @@ from dash_extensions.javascript import assign
 import dash_leaflet as dl
 from dash_pivottable import PivotTable
 
+IIC_LOGO = "assets/logo.png"
+
 checklist_format = {
     "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
     "style": {"margin-bottom": "15px"}
@@ -78,6 +80,56 @@ map_args = dict(
     children=[tile_layer, geo_json],
     style={'width': '100%', 'height': '600px'},
 )
+
+# make a reuseable navitem for the different examples
+nav_item = dbc.NavItem(dbc.NavLink("Link", href="#"))
+
+# make a reuseable dropdown for the different examples
+dropdown = dbc.DropdownMenu(
+    children=[
+        dbc.DropdownMenuItem("Entry 1"),
+        dbc.DropdownMenuItem("Entry 2"),
+        dbc.DropdownMenuItem(divider=True),
+        dbc.DropdownMenuItem("Entry 3"),
+    ],
+    nav=True,
+    in_navbar=True,
+    label="Menu",
+)
+
+logo = dbc.Navbar(
+    dbc.Container(
+        [
+            html.A(
+                # Use row and col to control vertical alignment of logo / brand
+                dbc.Row(
+                    [
+                        dbc.Col(html.Img(src=IIC_LOGO, height="30px")),
+                        dbc.Col(dbc.NavbarBrand("Logo", className="ms-2")),
+                    ],
+                    align="center",
+                    className="g-0",
+                ),
+                href="https://plotly.com",
+                style={"textDecoration": "none"},
+            ),
+            dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
+            dbc.Collapse(
+                dbc.Nav(
+                    [nav_item, dropdown],
+                    className="ms-auto",
+                    navbar=True,
+                ),
+                id="navbar-collapse",
+                navbar=True,
+            ),
+        ],
+    ),
+    color="dark",
+    dark=True,
+    className="mb-5",
+)
+
 
 
 def filter_args(id, options, format):
@@ -231,22 +283,25 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-4")
 
     # Create the app layout with tabs
-    app_layout = dbc.Container([
-        dbc.Row([
-            dbc.Col(
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
-                        html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
-                    ])
-                ], className="mb-4 border-0"),
-            width=12)
-        ]),
-        dbc.Tabs([
-            dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization"),
-            dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data"),
-        ], id="tabs", active_tab="tab-visualization"),
-    ], fluid=True)
+    app_layout = html.Div([
+        logo,
+        dbc.Container([
+            dbc.Row([
+                dbc.Col(
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
+                            html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
+                        ])
+                    ], className="mb-4 border-0"),
+                width=12)
+            ]),
+            dbc.Tabs([
+                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization"),
+                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data"),
+            ], id="tabs", active_tab="tab-visualization"),
+            ], fluid=True)
+        ])
 
     return app_layout
 
