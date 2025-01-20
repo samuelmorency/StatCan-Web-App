@@ -178,14 +178,14 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
     cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
-    clear_selection_args = button_args("clear-selection", bc.LIGHT_GREY, bc.IIC_BLACK, button_format)
+    clear_selection_args = button_args("clear-selection", "danger", bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
     
     filters_button = dbc.Button(
         "Show/hide filters",
         id="horizontal-collapse-button",
         className="mb-3 mt-3",
-        color="primary",
+        color="dark",
         n_clicks=0,
     )
     
@@ -213,8 +213,10 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dcc.Dropdown(**credential_args),
                 html.Label("Institution:"),
                 dcc.Dropdown(**institution_args),
-                html.Button('Reset Filters', **reset_filters_args),
-                html.Button('Clear Selection', **clear_selection_args),
+                #dbc.Button('Reset Filters', **reset_filters_args),
+                dbc.Button('Reset Filters', id='reset-filters', color="secondary", className="me-1"),
+                #dbc.Button('Clear Selection', **clear_selection_args, outline=True),
+                dbc.Button('Clear Selection', id='clear-selection', color="danger", className="me-1"),
                 dcc.Store(id='selected-isced', data=None),
                 dcc.Store(id='selected-province', data=None),
                 dcc.Store(id='selected-cma', data=None),
