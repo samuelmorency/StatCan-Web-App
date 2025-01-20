@@ -121,6 +121,7 @@ logo = dbc.Navbar(
                     navbar=True,
                 ),
                 id="navbar-collapse",
+                is_open=False,
                 navbar=True,
             ),
         ],
@@ -193,7 +194,10 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.CardHeader("Filters"),
             dbc.CardBody([
                 html.Label("STEM/BHASE:"),
-                dcc.Checklist(**stem_bhase_args, inline=True),
+                dbc.Checklist(**stem_bhase_args, inline=True, input_checked_style={
+                    "backgroundColor": bc.MAIN_RED,
+                    #"borderColor": "#ea6258",
+                }),
                 html.Label("Academic Year:"),
                 dcc.Checklist(**year_args, inline=True),
                 html.Label("Province:"),

@@ -169,7 +169,7 @@ def azure_cache_decorator(ttl=3600):
 
 
 # Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 class MapState:
