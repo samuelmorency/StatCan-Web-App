@@ -196,10 +196,13 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 html.Label("STEM/BHASE:"),
                 dbc.Checklist(**stem_bhase_args, inline=True, input_checked_style={
                     "backgroundColor": bc.MAIN_RED,
-                    #"borderColor": "#ea6258",
+                    "borderColor": bc.MAIN_RED,
                 }),
                 html.Label("Academic Year:"),
-                dcc.Checklist(**year_args, inline=True),
+                dbc.Checklist(**year_args, inline=True, input_checked_style={
+                    "backgroundColor": bc.MAIN_RED,
+                    "borderColor": bc.MAIN_RED,
+                }),
                 html.Label("Province:"),
                 dcc.Dropdown(**prov_args),
                 html.Label("Census Metropolitan Area/Census Agglomeration:"),
