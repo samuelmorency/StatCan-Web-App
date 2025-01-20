@@ -194,12 +194,12 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.CardHeader("Filters"),
             dbc.CardBody([
                 html.Label("STEM/BHASE:"),
-                dbc.Checklist(**stem_bhase_args, inline=True, input_checked_style={
+                dbc.Checklist(**stem_bhase_args, inline=False, input_checked_style={
                     "backgroundColor": bc.MAIN_RED,
                     "borderColor": bc.MAIN_RED,
                 }),
                 html.Label("Academic Year:"),
-                dbc.Checklist(**year_args, inline=True, input_checked_style={
+                dbc.Checklist(**year_args, inline=False, input_checked_style={
                     "backgroundColor": bc.MAIN_RED,
                     "borderColor": bc.MAIN_RED,
                 }),
