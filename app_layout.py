@@ -274,7 +274,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                     dbc.Col([province_card], width=6)
                 ], className="mb-4"),
             ])
-        ])
+        ], style={'background-color': '#d5dadc'})
     ])
 
     table_content = dbc.Card([
