@@ -306,8 +306,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 width=12)
             ]),
             dbc.Tabs([
-                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization"),
-                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data"),
+                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_class_name="bg-secondary text-white"),
+                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_class_name="bg-secondary text-white"),
             ], id="tabs", active_tab="tab-visualization"),
             ], fluid=True)
         ])
