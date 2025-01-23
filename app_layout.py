@@ -230,9 +230,10 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Button('Clear Selection', id='clear-selection', color="danger", className="me-1"),
                 dcc.Store(id='selected-isced', data=None),
                 dcc.Store(id='selected-province', data=None),
-                dcc.Store(id='selected-cma', data=None),
+                dcc.Store(id='selected-feature', data=None),
                 dcc.Store(id='selected-institution', data=None),
                 dcc.Store(id='selected-credential', data=None),
+                dcc.Store(id='selected-cma', data=None),
             ])
         ], className="mb-4 h-100"),
         id="horizontal-collapse",

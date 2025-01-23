@@ -816,7 +816,7 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
         dict or None: A dictionary defining the new viewport or None if no update
                       is required.
     """
-    if triggered_id == 'selected-cma' and selected_feature:
+    if triggered_id == 'selected-feature' and selected_feature:
         # For clicked features, zoom to the selected feature
         selected_geometry = cma_data[cma_data['DGUID'] == selected_feature]
         if not selected_geometry.empty:
@@ -836,10 +836,10 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
 
 # Optimized callback for map selection
 @app.callback(
-    Output('selected-cma', 'data'),
+    Output('selected-feature', 'data'),
     Input('cma-geojson', 'clickData'),
     Input('clear-selection', 'n_clicks'),
-    State('selected-cma', 'data'),
+    State('selected-feature', 'data'),
     prevent_initial_call=True
 )
 def update_selected_feature(click_data, n_clicks, stored_cma):
@@ -967,6 +967,29 @@ def update_selected_credential(clickData, n_clicks, stored_credential, figure):
         triggered_id=ctx_manager.triggered_id,
         clear_id='clear-selection',
         chart_id='graph-credential',
+        figure=figure
+    )
+
+@app.callback(
+    Output('selected-cma', 'data'),
+    Input('graph-cma', 'clickData'),
+    Input('clear-selection', 'n_clicks'),
+    State('selected-cma', 'data'),
+    State('graph-cma', 'figure'),
+    prevent_initial_call=True
+)
+def update_selected_cma(clickData, n_clicks, stored_credential, figure):
+    ctx_manager = CallbackContextManager(callback_context)
+    if not ctx_manager.is_triggered:
+        raise PreventUpdate
+
+    return update_selected_value(
+        click_data=clickData,
+        n_clicks=n_clicks,
+        stored_value=stored_credential,
+        triggered_id=ctx_manager.triggered_id,
+        clear_id='clear-selection',
+        chart_id='graph-cma',
         figure=figure
     )
 
@@ -1122,7 +1145,7 @@ def monitor_cache_usage():
     Input('cma-filter', 'value'),  # Add CMA filter input
     Input('selected-isced', 'data'),
     Input('selected-province', 'data'),
-    Input('selected-cma', 'data'),
+    Input('selected-feature', 'data'),
     Input('selected-credential', 'data'),
     Input('selected-institution', 'data'),
     State('map', 'viewport')
@@ -1211,7 +1234,7 @@ def update_visualizations(*args):
         should_update_viewport = triggered_id in [
             'stem-bhase-filter', 'year-filter', 'prov-filter',
             'isced-filter', 'credential-filter', 'institution-filter',
-            'selected-cma', 'clear-selection', 'reset-filters'
+            'selected-feature', 'clear-selection', 'reset-filters'
         ]
         
         if should_update_viewport:
