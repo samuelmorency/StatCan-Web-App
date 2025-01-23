@@ -7,6 +7,10 @@ from dash_pivottable import PivotTable
 
 IIC_LOGO = "assets/logo.png"
 
+#'#F1F1F1'
+
+
+
 checklist_format = {
     "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
     "style": {"margin-bottom": "15px"}
@@ -128,7 +132,7 @@ logo = dbc.Navbar(
     ),
     color="dark",
     dark=True,
-    className="mb-5",
+    className="mb-1",
 )
 
 
@@ -296,22 +300,12 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     app_layout = html.Div([
         logo,
         dbc.Container([
-            dbc.Row([
-                dbc.Col(
-                    dbc.Card([
-                        dbc.CardBody([
-                            html.H2("Canadian STEM/BHASE Graduates Dashboard", className="text-black"),
-                            html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
-                        ])
-                    ], className="mb-4 border-0"),
-                width=12)
-            ]),
             dbc.Tabs([
-                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_class_name="bg-black text-white", labelClassName="bg-light text-secondary"),
-                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_class_name="bg-black text-white", labelClassName="bg-light text-secondary"),
+                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_class_name="bg-WhiteSmoke text-black", label_class_name="bg-secondary text-black-muted"),
+                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_class_name="bg-WhiteSmoke text-black", label_class_name="bg-secondary text-black-muted"),
             ], id="tabs", active_tab="tab-visualization"),
             ], fluid=True)
-        ])
+        ], className="bg-dark")
 
     return app_layout
 
