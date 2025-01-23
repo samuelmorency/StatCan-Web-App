@@ -11,6 +11,8 @@ TAB_STYLE = dict(backgroundColor="#d9d9d9", borderColor="#F1F1F1", color="black"
 
 ACTIVE_TAB_STYLE = dict(backgroundColor="#F1F1F1", borderColor="#F1F1F1", color="black")
 
+APP_STYLE = {"font-family":'Open Sans'}
+
 
 #'#F1F1F1'
 
@@ -137,7 +139,7 @@ logo = dbc.Navbar(
     ),
     color="dark",
     dark=True,
-    className="mb-1",
+    className="mb-0",
 )
 
 
@@ -245,7 +247,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
                 ),
         ])
-    ], className="mb-4 mt-4")
+    ], className="mb-2 mt-4")
     
     isced_card = dbc.Card([
         dbc.CardHeader("ISCED Level Distribution"),
@@ -256,7 +258,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
             ),
         ])
-    ], className="mb-4 mt-4")
+    ], className="mb-2 mt-2")
     
     province_card = dbc.Card([
         dbc.CardHeader("Provincial Distribution"),
@@ -267,7 +269,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
             ),
         ])
-    ], className="mb-4 mt-4")
+    ], className="mb-2 mt-2")
     
     visualization_content = html.Div([
         
@@ -289,14 +291,14 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     table_content = dbc.Row([
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader(html.H3("Pivot Table"), className="m-1"),
+                dbc.CardHeader(dbc.Button("Download as Displayed", id='download-button', color="secondary")),
                 dbc.CardBody([          
-                    dbc.Button("Download as Displayed", id='download-button', color="secondary"),
+                    
                     dcc.Download(id="download-data"),
                     dbc.Col([
                         initialize_pivot_table(data)  # Pass the dataset to pivot table
                     ])
-                ], className="m-1")], className="m-2")
+                ], className="m-1")], className="mb-4 mt-4 mx-8")
             ], style={'background-color': '#F1F1F1'})
         ])
         
@@ -310,7 +312,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_style=ACTIVE_TAB_STYLE, label_style=TAB_STYLE),
             ], id="tabs", active_tab="tab-visualization"),
             ], fluid=True)
-        ], className="bg-dark")
+        ], className="bg-dark", style=APP_STYLE)
 
     return app_layout
 
