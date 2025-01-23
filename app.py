@@ -28,6 +28,7 @@ from time import perf_counter
 from functools import wraps
 import threading
 from collections import defaultdict
+import plotly.graph_objects as go
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -576,25 +577,33 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     aggregations = {
         'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
         'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
-        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum()
+        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum(),
+        'credential': filtered_data.groupby("Credential_Type", observed=True)['value'].sum(),
+        'institution': filtered_data.groupby("Institution", observed=True)['value'].sum()
     }
     
     # Pre-allocate DataFrames for better memory efficiency
     cma_grads = pd.DataFrame()
     isced_grads = pd.DataFrame()
     province_grads = pd.DataFrame()
+    credential_grads = pd.DataFrame()
+    institution_grads = pd.DataFrame()
     
     # Perform aggregations with optimized settings
     with pd.option_context('mode.chained_assignment', None):
         cma_grads = aggregations['cma'].reset_index(name='graduates')
         isced_grads = aggregations['isced'].reset_index(name='graduates')
         province_grads = aggregations['province'].reset_index(name='graduates')
+        credential_grads = aggregations['credential'].reset_index(name='graduates')
+        institution_grads = aggregations['institution'].reset_index(name='graduates')
 
     return (
         filtered_data.reset_index(),
         cma_grads,
         isced_grads,
-        province_grads
+        province_grads,
+        credential_grads,
+        institution_grads
     )
 
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
@@ -1154,7 +1163,7 @@ def update_visualizations(*args):
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
         # Process data with optimized function
-        filtered_data, cma_grads, isced_grads, province_grads = preprocess_data(
+        filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = preprocess_data(
             tuple(stem_bhase or []),
             tuple(years or []),
             tuple(provs or []),
@@ -1165,7 +1174,7 @@ def update_visualizations(*args):
         )
         
         # Apply cross-filtering with vectorized operations
-        if any([selected_isced, selected_province, selected_feature]):
+        if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution]):
             mask = pd.Series(True, index=filtered_data.index)
             if selected_isced:
                 mask &= filtered_data['ISCED_level_of_education'] == selected_isced
@@ -1173,6 +1182,10 @@ def update_visualizations(*args):
                 mask &= filtered_data['Province_Territory'] == selected_province
             if selected_feature:
                 mask &= filtered_data['DGUID'] == selected_feature
+            if selected_isced:
+                mask &= filtered_data['Credential_Type'] == selected_credential
+            if selected_isced:
+                mask &= filtered_data['Institution'] == selected_institution
 
             filtered_data = filtered_data[mask]
             if filtered_data.empty:
@@ -1182,6 +1195,10 @@ def update_visualizations(*args):
             cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum().reset_index(name='graduates')
             isced_grads = filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum().reset_index(name='graduates')
             province_grads = filtered_data.groupby("Province_Territory", observed=True)['value'].sum().reset_index(name='graduates')
+            # Add aggregations for new charts
+            #cma_aggregation = filtered_data.groupby("CMA_CA", observed=True)['value'].sum().reset_index(name='graduates')
+            credential_grads = filtered_data.groupby("Credential_Type", observed=True)['value'].sum().reset_index(name='graduates')
+            institution_grads = filtered_data.groupby("Institution", observed=True)['value'].sum().reset_index(name='graduates')
 
         # Prepare map data efficiently
         cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='left')
@@ -1260,15 +1277,10 @@ def update_visualizations(*args):
             'Province/Territory', 
             selected_province
         )
-        
-        # Add aggregations for new charts
-        cma_aggregation = filtered_data.groupby("CMA_CA", observed=True)['value'].sum().reset_index(name='graduates')
-        credential_aggregation = filtered_data.groupby("Credential_Type", observed=True)['value'].sum().reset_index(name='graduates')
-        institution_aggregation = filtered_data.groupby("Institution", observed=True)['value'].sum().reset_index(name='graduates')
 
         # Create new charts
         fig_cma = create_chart(
-            cma_aggregation,
+            cma_grads,
             'CMA_CA',
             'graduates',
             'Census Metropolitan Area',
@@ -1276,7 +1288,7 @@ def update_visualizations(*args):
         )
 
         fig_credential = create_chart(
-            credential_aggregation,
+            credential_grads,
             'Credential_Type',
             'graduates',
             'Credential Type',
@@ -1284,7 +1296,7 @@ def update_visualizations(*args):
         )
 
         fig_institution = create_chart(
-            institution_aggregation,
+            institution_grads,
             'Institution',
             'graduates',
             'Institution',
