@@ -104,13 +104,13 @@ logo = dbc.Navbar(
                 # Use row and col to control vertical alignment of logo / brand
                 dbc.Row(
                     [
-                        dbc.Col(html.Img(src=IIC_LOGO, height="30px")),
-                        dbc.Col(dbc.NavbarBrand("Logo", className="ms-2")),
+                        dbc.Col(html.Img(src=IIC_LOGO, height="45px")),
+                        dbc.Col(dbc.NavbarBrand("Canadian STEM/BHASE Graduates Dashboard", className="ms-2")),
                     ],
                     align="center",
                     className="g-0",
                 ),
-                href="https://plotly.com",
+                href="https://invcanadazone.sharepoint.com/sites/infozone",
                 style={"textDecoration": "none"},
             ),
             dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
@@ -124,7 +124,7 @@ logo = dbc.Navbar(
                 is_open=False,
                 navbar=True,
             ),
-        ],
+        ], fluid=True,
     ),
     color="dark",
     dark=True,
@@ -247,7 +247,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
             ),
         ])
-    ])
+    ], className="mb-4 mt-4")
     
     province_card = dbc.Card([
         dbc.CardHeader("Provincial Distribution"),
@@ -258,7 +258,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 type="border",
             ),
         ])
-    ])
+    ], className="mb-4 mt-4")
     
     visualization_content = html.Div([
         
@@ -299,7 +299,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Col(
                     dbc.Card([
                         dbc.CardBody([
-                            html.H1("Canadian STEM/BHASE Graduates Dashboard", className="text-primary mb-4"),
+                            html.H2("Canadian STEM/BHASE Graduates Dashboard", className="text-black"),
                             html.H4("Interactive visualization of graduate statistics across Canada", className="text-muted")
                         ])
                     ], className="mb-4 border-0"),
