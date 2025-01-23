@@ -278,15 +278,19 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ])
 
     table_content = dbc.Row([
-        dbc.Card([
-            dbc.Stack([
-                dbc.Col(html.H3("Graduate Data Pivot Table")),
-                dbc.Col(dbc.Button("Download as Displayed", id='download-button', color="secondary", className="ms-auto")),
-            ], direction="horizontal", className="mb-4"),            
-            dcc.Download(id="download-data"),
-            initialize_pivot_table(data)  # Pass the dataset to pivot table
-        ], className="m-4")
-    ], style={'background-color': '#F1F1F1'})
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H3("Pivot Table"), className="m-1"),
+                dbc.CardBody([          
+                    dbc.Button("Download as Displayed", id='download-button', color="secondary"),
+                    dcc.Download(id="download-data"),
+                    dbc.Col([
+                        initialize_pivot_table(data)  # Pass the dataset to pivot table
+                    ])
+                ], className="m-1")], className="m-2")
+            ], style={'background-color': '#F1F1F1'})
+        ])
+        
 
     # Create the app layout with tabs
     app_layout = html.Div([
@@ -303,8 +307,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 width=12)
             ]),
             dbc.Tabs([
-                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_class_name="bg-light text-black"),
-                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_class_name="bg-secondary text-white"),
+                dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_class_name="bg-black text-white", labelClassName="bg-light text-secondary"),
+                dbc.Tab(table_content, label="Data Explorer", tab_id="tab-data", active_label_class_name="bg-black text-white", labelClassName="bg-light text-secondary"),
             ], id="tabs", active_tab="tab-visualization"),
             ], fluid=True)
         ])
