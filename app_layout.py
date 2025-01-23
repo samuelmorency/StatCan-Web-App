@@ -7,6 +7,22 @@ from dash_pivottable import PivotTable
 
 IIC_LOGO = "assets/logo.png"
 
+TAB_STYLE = {
+    "backgroundColor": "#e6e6e6",
+    "borderColor": "#F1F1F1" 
+    "color": "black",
+    #"padding": "10px 15px",
+    #"borderRadius": "5px 5px 0 0"
+}
+
+ACTIVE_TAB_STYLE = {
+    "backgroundColor": "#F1F1F1",
+    "borderColor": "#F1F1F1",
+    "color": "black",
+    #"padding": "10px 15px",
+    #"borderRadius": "5px 5px 0 0"
+}
+
 #'#F1F1F1'
 
 
