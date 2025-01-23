@@ -1182,9 +1182,9 @@ def update_visualizations(*args):
                 mask &= filtered_data['Province_Territory'] == selected_province
             if selected_feature:
                 mask &= filtered_data['DGUID'] == selected_feature
-            if selected_isced:
+            if selected_credential:
                 mask &= filtered_data['Credential_Type'] == selected_credential
-            if selected_isced:
+            if selected_institution:
                 mask &= filtered_data['Institution'] == selected_institution
 
             filtered_data = filtered_data[mask]
