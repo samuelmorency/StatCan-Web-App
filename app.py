@@ -937,6 +937,54 @@ def update_selected_province(clickData, n_clicks, stored_province, figure):
         figure=figure
     )
 
+# Add new callback for credential selection
+@app.callback(
+    Output('selected-credential', 'data'),
+    Input('graph-credential', 'clickData'),
+    Input('clear-selection', 'n_clicks'),
+    State('selected-credential', 'data'),
+    State('graph-credential', 'figure'),
+    prevent_initial_call=True
+)
+def update_selected_credential(clickData, n_clicks, stored_credential, figure):
+    ctx_manager = CallbackContextManager(callback_context)
+    if not ctx_manager.is_triggered:
+        raise PreventUpdate
+
+    return update_selected_value(
+        click_data=clickData,
+        n_clicks=n_clicks,
+        stored_value=stored_credential,
+        triggered_id=ctx_manager.triggered_id,
+        clear_id='clear-selection',
+        chart_id='graph-credential',
+        figure=figure
+    )
+
+# Add new callback for institution selection
+@app.callback(
+    Output('selected-institution', 'data'),
+    Input('graph-institution', 'clickData'),
+    Input('clear-selection', 'n_clicks'),
+    State('selected-institution', 'data'),
+    State('graph-institution', 'figure'),
+    prevent_initial_call=True
+)
+def update_selected_institution(clickData, n_clicks, stored_institution, figure):
+    ctx_manager = CallbackContextManager(callback_context)
+    if not ctx_manager.is_triggered:
+        raise PreventUpdate
+
+    return update_selected_value(
+        click_data=clickData,
+        n_clicks=n_clicks,
+        stored_value=stored_institution,
+        triggered_id=ctx_manager.triggered_id,
+        clear_id='clear-selection',
+        chart_id='graph-institution',
+        figure=figure
+    )
+
 def update_map_style(geojson_data, colorscale, selected_feature=None):
     """
     Create a Patch object for updating map styles.
@@ -1052,6 +1100,9 @@ def monitor_cache_usage():
     Output('cma-geojson', 'data'),
     Output('graph-isced', 'figure'),
     Output('graph-province', 'figure'),
+    Output('graph-cma', 'figure'),
+    Output('graph-credential', 'figure'),
+    Output('graph-institution', 'figure'),
     Output('map', 'viewport'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
@@ -1063,6 +1114,8 @@ def monitor_cache_usage():
     Input('selected-isced', 'data'),
     Input('selected-province', 'data'),
     Input('selected-cma', 'data'),
+    Input('selected-credential', 'data'),
+    Input('selected-institution', 'data'),
     State('map', 'viewport')
 )
 def update_visualizations(*args):
@@ -1091,7 +1144,8 @@ def update_visualizations(*args):
     try:
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
-         selected_isced, selected_province, selected_feature) = args[:-1]
+         selected_isced, selected_province, selected_feature, 
+         selected_credential, selected_institution) = args[:-1]
         
         ctx = callback_context
         if not ctx.triggered:
@@ -1207,6 +1261,36 @@ def update_visualizations(*args):
             selected_province
         )
         
+        # Add aggregations for new charts
+        cma_aggregation = filtered_data.groupby("CMA_CA", observed=True)['value'].sum().reset_index(name='graduates')
+        credential_aggregation = filtered_data.groupby("Credential_Type", observed=True)['value'].sum().reset_index(name='graduates')
+        institution_aggregation = filtered_data.groupby("Institution", observed=True)['value'].sum().reset_index(name='graduates')
+
+        # Create new charts
+        fig_cma = create_chart(
+            cma_aggregation,
+            'CMA_CA',
+            'graduates',
+            'Census Metropolitan Area',
+            selected_feature
+        )
+
+        fig_credential = create_chart(
+            credential_aggregation,
+            'Credential_Type',
+            'graduates',
+            'Credential Type',
+            selected_credential
+        )
+
+        fig_institution = create_chart(
+            institution_aggregation,
+            'Institution',
+            'graduates',
+            'Institution',
+            selected_institution
+        )
+        
         # Monitor cache at the start of major updates
         monitor_cache_usage()
         
@@ -1214,6 +1298,9 @@ def update_visualizations(*args):
             geojson_data,
             fig_isced,
             fig_province,
+            fig_cma,
+            fig_credential,
+            fig_institution,
             viewport_output
         )
         

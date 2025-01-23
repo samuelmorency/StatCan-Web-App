@@ -231,6 +231,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dcc.Store(id='selected-isced', data=None),
                 dcc.Store(id='selected-province', data=None),
                 dcc.Store(id='selected-cma', data=None),
+                dcc.Store(id='selected-institution', data=None),
+                dcc.Store(id='selected-credential', data=None),
             ])
         ], className="mb-4 h-100"),
         id="horizontal-collapse",
@@ -271,6 +273,39 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         ])
     ], className="mb-2 mt-2")
     
+    cma_card = dbc.Card([
+        dbc.CardHeader("CMA/CA Distribution"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dcc.Graph(id='graph-cma'),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ], className="mb-2 mt-2")
+
+    credential_card = dbc.Card([
+        dbc.CardHeader("Credential Type Distribution"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dcc.Graph(id='graph-credential'),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ], className="mb-2 mt-2")
+
+    institution_card = dbc.Card([
+        dbc.CardHeader("Institution Distribution"),
+        dbc.CardBody([
+            dbc.Spinner(
+                dcc.Graph(id='graph-institution'),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ], className="mb-2 mt-2")
+
     visualization_content = html.Div([
         
         # Main content row with filters and visualizations
@@ -283,6 +318,13 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Row([
                     dbc.Col([isced_card], width=6),
                     dbc.Col([province_card], width=6)
+                ], className="mb-4"),
+                dbc.Row([
+                    dbc.Col([cma_card], width=6),
+                    dbc.Col([credential_card], width=6)
+                ], className="mb-4"),
+                dbc.Row([
+                    dbc.Col([institution_card], width=12)
                 ], className="mb-4"),
             ])
         ], style={'background-color': '#F1F1F1'})
