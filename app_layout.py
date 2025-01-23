@@ -7,7 +7,7 @@ from dash_pivottable import PivotTable
 
 IIC_LOGO = "assets/logo.png"
 
-TAB_STYLE = dict(backgroundColor="#e6e6e6", borderColor="#F1F1F1", color="black")
+TAB_STYLE = dict(backgroundColor="#d9d9d9", borderColor="#F1F1F1", color="black")
 
 ACTIVE_TAB_STYLE = dict(backgroundColor="#F1F1F1", borderColor="#F1F1F1", color="black")
 
