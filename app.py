@@ -571,7 +571,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     # Use optimized filtering
     filtered_data = filter_optimizer.filter_data(filters)
     if filtered_data.empty:
-        return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     # Use vectorized operations instead of parallel processing
     aggregations = {
