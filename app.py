@@ -676,41 +676,36 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     sorted_data = dataframe.sort_values(y_column, ascending=True)
     sorted_data['text'] = sorted_data[y_column].apply(lambda x: f'{int(x):,}')
     
-    fig = px.bar(
-        sorted_data,
-        x=y_column,
-        y=x_column,
-        orientation='h',
-        title=f'Number of Graduates by {x_label}',
-        color=y_column,
-        color_continuous_scale='Reds',  # Simplified color scale definition
-        text='text'
-    )
-    
-    if selected_value:
-        colors = [bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]]
-        fig.data[0].marker.color = colors
-        fig.update_coloraxes(showscale=False)
-    
-    # Configure text position and style
-    fig.update_traces(
-        textposition='outside',  # Place text outside of bars
-        cliponaxis=False,  # Prevent text from being cut off
-        textfont=dict(color=bc.IIC_BLACK)  # Match text color to theme
+    # Create figure using go.Figure instead of px.bar
+    fig = go.Figure(
+        data=go.Bar(
+            x=sorted_data[y_column],
+            y=sorted_data[x_column],
+            orientation='h',
+            text=sorted_data['text'],
+            textposition='outside',
+            cliponaxis=False,
+            textfont=dict(color=bc.IIC_BLACK),
+            marker=dict(
+                color=[bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]] if selected_value else sorted_data[y_column],
+                colorscale='Reds' if not selected_value else None
+            )
+        )
     )
     
     fig.update_layout(
+        title=f'Number of Graduates by {x_label}',
         showlegend=False,
         coloraxis_showscale=False,
         xaxis_title=None,
         yaxis_title=None,
-        height=500,
+        height=500,  # Keeping 500 as default but can be adjusted
         margin=dict(l=50, r=50, t=50, b=50),
         clickmode='event+select',
         plot_bgcolor='white',
         paper_bgcolor='white',
         font={'color': bc.IIC_BLACK},
-        modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d'] # toImage can also be removed
+        modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d']
     )
     
     return fig
