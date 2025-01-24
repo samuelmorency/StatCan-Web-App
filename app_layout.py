@@ -7,7 +7,7 @@ from dash_pivottable import PivotTable
 
 IIC_LOGO = "assets/logo.png"
 
-TAB_STYLE = dict(backgroundColor="#d9d9d9", borderColor="#F1F1F1", color="black")
+TAB_STYLE = dict(backgroundColor="#cccccc", borderColor="#F1F1F1", color="black")
 
 ACTIVE_TAB_STYLE = dict(backgroundColor="#F1F1F1", borderColor="#F1F1F1", color="black")
 
@@ -121,7 +121,7 @@ logo = dbc.Navbar(
                     align="center",
                     className="g-0",
                 ),
-                href="https://invcanadazone.sharepoint.com/sites/infozone",
+                #href="https://invcanadazone.sharepoint.com/sites/infozone",
                 style={"textDecoration": "none"},
             ),
             dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
@@ -338,7 +338,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     table_content = dbc.Row([
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader(dbc.Button("Download as Displayed", id='download-button', color="secondary")),
+                dbc.CardHeader(dbc.Button("Download as Displayed", id='download-button', style={'background-color': 'black', 'borderColor': 'black'})),
                 dbc.CardBody([          
                     
                     dcc.Download(id="download-data"),
