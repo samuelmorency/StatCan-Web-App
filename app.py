@@ -1148,6 +1148,7 @@ def monitor_cache_usage():
     Input('selected-feature', 'data'),
     Input('selected-credential', 'data'),
     Input('selected-institution', 'data'),
+    Input('selected-cma', 'data'),
     State('map', 'viewport')
 )
 def update_visualizations(*args):
@@ -1177,7 +1178,7 @@ def update_visualizations(*args):
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
          selected_isced, selected_province, selected_feature, 
-         selected_credential, selected_institution) = args[:-1]
+         selected_credential, selected_institution, selected_cma) = args[:-1]
         
         ctx = callback_context
         if not ctx.triggered:
@@ -1197,7 +1198,7 @@ def update_visualizations(*args):
         )
         
         # Apply cross-filtering with vectorized operations
-        if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution]):
+        if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution, selected_cma]):
             mask = pd.Series(True, index=filtered_data.index)
             if selected_isced:
                 mask &= filtered_data['ISCED_level_of_education'] == selected_isced
@@ -1209,6 +1210,8 @@ def update_visualizations(*args):
                 mask &= filtered_data['Credential_Type'] == selected_credential
             if selected_institution:
                 mask &= filtered_data['Institution'] == selected_institution
+            if selected_cma:
+                mask &= filtered_data['CMA_CA'] == selected_cma
 
             filtered_data = filtered_data[mask]
             if filtered_data.empty:
