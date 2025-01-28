@@ -690,7 +690,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
                 color=[bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]] if selected_value else sorted_data[y_column],
                 colorscale='Reds' if not selected_value else None
             )
-        )
+        ), layout={'height': 5000}
     )
     
     fig.update_layout(
@@ -1564,5 +1564,5 @@ app.clientside_callback(
 )
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
 
