@@ -29,6 +29,9 @@ from functools import wraps
 import threading
 from collections import defaultdict
 import plotly.graph_objects as go
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1564,5 +1567,5 @@ app.clientside_callback(
 )
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
 

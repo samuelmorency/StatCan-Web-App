@@ -280,9 +280,9 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.Spinner(
                 html.Div([
                     html.Div(
-                        dcc.Graph(id='graph-cma', config={'displaylogo': False}),
+                        dcc.Graph(id='graph-cma', config={'displaylogo': False}), className='scroll'
                     )
-                ],style={'overflow-y':'auto', 'height':500}),
+                ]),
                 color="primary",
                 type="border",
             ),
@@ -304,7 +304,11 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader("Institution Distribution"),
         dbc.CardBody([
             dbc.Spinner(
-                dcc.Graph(id='graph-institution', config={'displaylogo': False}),
+                html.Div([
+                    html.Div(
+                        dcc.Graph(id='graph-institution', config={'displaylogo': False}), className='scroll'
+                    )
+                ]),
                 color="primary",
                 type="border",
             ),
