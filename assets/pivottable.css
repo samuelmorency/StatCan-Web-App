@@ -19,7 +19,7 @@
 }
 
 table.pvtTable {
-    font-size: 14px;
+    font-size: 12px;
     text-align: left;
     border-collapse: collapse;
     margin-top: 3px;
@@ -31,7 +31,7 @@ table.pvtTable thead tr th,
 table.pvtTable tbody tr th {
     background-color: #F1F1F1;
     border: 1px solid #97989A; /* Using LIGHT_GREY */
-    font-size: 14px;
+    font-size: 12px;
     padding: 5px;
 }
 
@@ -127,7 +127,7 @@ table.pvtTable tbody tr td {
 
 .pvtDropdownValue {
     padding: 2px 5px;
-    font-size: 14px;
+    font-size: 12px;
     text-align: left;
 }
 .pvtDropdownActiveValue {
@@ -203,7 +203,7 @@ table.pvtTable tbody tr td {
     position: absolute;
     right: 5px;
     top: 5px;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
     text-decoration: none !important;
 }
@@ -212,7 +212,7 @@ table.pvtTable tbody tr td {
     position: absolute;
     left: 5px;
     top: 5px;
-    font-size: 20px;
+    font-size: 18px;
     cursor: move;
     color: #a2b1c6;
 }
@@ -226,7 +226,7 @@ table.pvtTable tbody tr td {
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
     border-color: #54575A;
-    font-size: 16px;
+    font-size: 14px;
     margin: 3px;
     transition: 0.34s all cubic-bezier(0.19, 1, 0.22, 1);
     text-decoration: none !important;
@@ -244,13 +244,13 @@ table.pvtTable tbody tr td {
 .pvtFilterBox input {
     border: 1px solid #c8d4e3;
     border-radius: 5px;
-    color: #7F2629;
+    color: #506784;
     padding: 0 3px;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .pvtFilterBox input:focus {
-    border-color: #C01823;
+    border-color: #119dff;
     outline: none;
 }
 
@@ -278,17 +278,17 @@ table.pvtTable tbody tr td {
     margin: 10px auto;
 }
 .pvtFilterBox button {
-    color: #7F2629;
+    color: #2a3f5f;
 }
 .pvtFilterBox input[type='text'] {
     width: 230px;
-    color: #7F2629;
+    color: #2a3f5f;
     margin-bottom: 5px;
 }
 
 .pvtCheckContainer {
     text-align: left;
-    font-size: 16px;
+    font-size: 14px;
     white-space: nowrap;
     overflow-y: scroll;
     width: 100%;
@@ -314,7 +314,7 @@ table.pvtTable tbody tr td {
     display: none;
     width: 35px;
     float: left;
-    font-size: 14px;
+    font-size: 12px;
     padding-left: 5px;
     cursor: pointer;
 }
