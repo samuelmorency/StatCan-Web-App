@@ -870,6 +870,10 @@ institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(da
 
 
 app.layout = html.Div([
+    html.Link(
+        rel='stylesheet',
+        href='/assets/assets/pivottable.css'
+    ),
     dcc.Store(id='client-data-store', storage_type='session'),
     dcc.Store(id='client-filters-store', storage_type='local'),
     create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)

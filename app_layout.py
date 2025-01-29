@@ -209,7 +209,8 @@ def initialize_pivot_table(data):
         colOrder='key_a_to_z',
         rowOrder='key_a_to_z',
         menuLimit=2000,
-        unusedOrientationCutoff=10000
+        unusedOrientationCutoff=10000,
+        #className='pvtUi'
     )
 
 def create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
