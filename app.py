@@ -1355,7 +1355,7 @@ def update_visualizations(*args):
                         'weight': 2 if row['DGUID'] == selected_feature else 0.5,
                         'fillOpacity': 0.8
                     },
-                    'tooltip': f"CMA/CA: {row['CMA_CA']}<br>Graduates: {int(row['graduates'])}"
+                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA_CA']}<br>Graduates: {int(row['graduates']):,}</div>"
                 }
             }
             for (_, row), color in zip(cma_data.iterrows(), colors)
