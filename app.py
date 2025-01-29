@@ -731,7 +731,9 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     
     #If x_label = 'Institution' or 'CMA_CA', then chart_height=1000
     if x_label == 'Institution' or x_label == 'Census Metropolitan Area':
-        chart_height= 25 * len(sorted_data.index)
+        num_bars =len(sorted_data.index)
+        max_height=max(chart_height, 25 * len(sorted_data.index))
+        chart_height= max_height
         # filename = replace spaces in x_label with _
         #filename = x_label.replace(' ', '_')
         #sorted_data.to_csv(filename+'.csv', index=False)
@@ -1122,7 +1124,7 @@ def update_hover_style(hover_feature, current_geojson):
     Adjusts the styling of GeoJSON features on the map when a user hovers over them.
     The hovered feature is highlighted to provide visual feedback, and previously
     hovered features are reverted to their original style.
-
+    
     Args:
         hover_feature (dict or None): The feature currently hovered, containing its 'id'.
         current_geojson (dict): The current GeoJSON data displayed on the map.
