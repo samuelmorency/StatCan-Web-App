@@ -7,16 +7,44 @@ from dash_pivottable import PivotTable
 
 IIC_LOGO = "assets/logo.png"
 
-TAB_STYLE = dict(backgroundColor="#cccccc", borderColor="#F1F1F1", color="black")
+TAB_STYLE = {
+    "backgroundColor": "#cccccc", 
+    "borderColor": "#F1F1F1", 
+    "color": "black",
+    "font-family": 'Open Sans',
+    "font-weight": "600"
+}
 
-ACTIVE_TAB_STYLE = dict(backgroundColor="#F1F1F1", borderColor="#F1F1F1", color="black")
+ACTIVE_TAB_STYLE = {
+    "backgroundColor": "#F1F1F1", 
+    "borderColor": "#F1F1F1", 
+    "color": "black",
+    "font-family": 'Open Sans',
+    "font-weight": "600"
+}
 
-APP_STYLE = {"font-family":'Open Sans'}
+APP_STYLE = {
+    "font-family": 'Open Sans',
+    "font-weight": "600"
+}
 
+TEXT_STYLE = {
+    "font-family": 'Open Sans',
+    "font-weight": "600"
+}
 
-#'#F1F1F1'
+CARD_HEADER_STYLE = {
+    "font-family": 'Open Sans',
+    "font-weight": "600",
+    "font-size": "16px"
+}
 
-
+LABEL_STYLE = {
+    "font-family": 'Open Sans',
+    "font-weight": "600",
+    "margin-bottom": "5px",
+    "margin-top": "10px"
+}
 
 checklist_format = {
     "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
@@ -28,7 +56,11 @@ multi_dropdown_format = {
     "multi": True,
     "placeholder": "All",
     "searchable": True,
-    "style": {"margin-bottom": "15px"}
+    "style": {
+        "margin-bottom": "15px",
+        "font-family": 'Open Sans',
+        "font-weight": "600"
+    }
 }
 
 button_format = {
@@ -36,7 +68,8 @@ button_format = {
     "border": "none",
     "padding": "10px 20px",
     "border-radius": "5px",
-    #"margin-right": "10px"
+    "font-family": 'Open Sans',
+    "font-weight": "600"
 }
 
 tile_layer = dl.TileLayer(
@@ -116,7 +149,7 @@ logo = dbc.Navbar(
                 dbc.Row(
                     [
                         dbc.Col(html.Img(src=IIC_LOGO, height="45px")),
-                        dbc.Col(dbc.NavbarBrand("Canadian STEM/BHASE Graduates Dashboard", className="ms-2")),
+                        dbc.Col(dbc.NavbarBrand("Canadian STEM/BHASE Graduates Dashboard", className="ms-2", style=TEXT_STYLE)),
                     ],
                     align="center",
                     className="g-0",
@@ -202,27 +235,27 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     
     filters_section = dbc.Collapse(
         dbc.Card([
-            dbc.CardHeader("Filters"),
+            dbc.CardHeader("Filters", style=CARD_HEADER_STYLE),
             dbc.CardBody([
-                html.Label("STEM/BHASE:"),
+                html.Label("STEM/BHASE:", style=LABEL_STYLE),
                 dbc.Checklist(**stem_bhase_args, inline=False, input_checked_style={
                     "backgroundColor": bc.MAIN_RED,
                     "borderColor": bc.MAIN_RED,
                 }),
-                html.Label("Academic Year:"),
+                html.Label("Academic Year:", style=LABEL_STYLE),
                 dbc.Checklist(**year_args, inline=False, input_checked_style={
                     "backgroundColor": bc.MAIN_RED,
                     "borderColor": bc.MAIN_RED,
                 }),
-                html.Label("Province:"),
+                html.Label("Province:", style=LABEL_STYLE),
                 dcc.Dropdown(**prov_args),
-                html.Label("Census Metropolitan Area/Census Agglomeration:"),
+                html.Label("Census Metropolitan Area/Census Agglomeration:", style=LABEL_STYLE),
                 dcc.Dropdown(**cma_args),
-                html.Label("ISCED Level:"),
+                html.Label("ISCED Level:", style=LABEL_STYLE),
                 dcc.Dropdown(**isced_args),
-                html.Label("Credential Type:"),
+                html.Label("Credential Type:", style=LABEL_STYLE),
                 dcc.Dropdown(**credential_args),
-                html.Label("Institution:"),
+                html.Label("Institution:", style=LABEL_STYLE),
                 dcc.Dropdown(**institution_args),
                 #dbc.Button('Reset Filters', **reset_filters_args),
                 dbc.Button('Reset Filters', id='reset-filters', color="secondary", className="me-1"),
@@ -241,7 +274,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     )
     
     map_card = dbc.Card([
-        dbc.CardHeader("Graduates by CMA/CA"),
+        dbc.CardHeader("Graduates by CMA/CA", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dl.Map(**map_args),
@@ -253,7 +286,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-4")
     
     isced_card = dbc.Card([
-        dbc.CardHeader("ISCED Level Distribution"),
+        dbc.CardHeader("ISCED Level Distribution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-isced', config={'displaylogo': False}),
@@ -264,7 +297,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     province_card = dbc.Card([
-        dbc.CardHeader("Provincial Distribution"),
+        dbc.CardHeader("Provincial Distribution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-province', config={'displaylogo': False}),
@@ -275,7 +308,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     cma_card = dbc.Card([
-        dbc.CardHeader("CMA/CA Distribution"),
+        dbc.CardHeader("CMA/CA Distribution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([
@@ -290,7 +323,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
 
     credential_card = dbc.Card([
-        dbc.CardHeader("Credential Type Distribution"),
+        dbc.CardHeader("Credential Type Distribution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-credential', config={'displaylogo': False}),
@@ -301,7 +334,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
 
     institution_card = dbc.Card([
-        dbc.CardHeader("Institution Distribution"),
+        dbc.CardHeader("Institution Distribution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([
@@ -333,7 +366,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                     dbc.Col([credential_card], width=6)
                 ], className="mb-4"),
                 dbc.Row([
-                    dbc.Col([institution_card], width=6)
+                    dbc.Col([institution_card], width=8)
                 ], className="mb-4"),
             ])
         ], style={'background-color': '#F1F1F1'})

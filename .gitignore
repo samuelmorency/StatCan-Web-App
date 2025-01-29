@@ -156,3 +156,7 @@ app_working_backup.py
 data_wrangle.ipynb
 config.py
 test_app.py
+
+Institution.csv
+ISCED_Level_of_Education.csv
+Census_Metropolitan_Area.csv

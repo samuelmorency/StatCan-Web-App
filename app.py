@@ -174,7 +174,41 @@ def azure_cache_decorator(ttl=3600):
 
 
 # Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(
+    __name__,
+    external_stylesheets=[
+        dbc.themes.BOOTSTRAP,
+        # Add Google Fonts link for Open Sans SemiBold
+        'https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap'
+    ]
+)
+
+# Set global font styles for the app 
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            * {
+                font-family: 'Open Sans', sans-serif;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
 server = app.server
 
 class MapState:
@@ -698,6 +732,9 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     #If x_label = 'Institution' or 'CMA_CA', then chart_height=1000
     if x_label == 'Institution' or x_label == 'Census Metropolitan Area':
         chart_height= 50 * len(sorted_data.index)
+        # filename = replace spaces in x_label with _
+        filename = x_label.replace(' ', '_')
+        sorted_data.to_csv(filename+'.csv', index=False)
     
     # Create figure using go.Figure instead of px.bar
     fig = go.Figure(
@@ -708,7 +745,14 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
             text=sorted_data['text'],
             textposition='outside',
             cliponaxis=False,
-            textfont=dict(color=bc.IIC_BLACK),
+            textfont=dict(color=bc.IIC_BLACK, size=12, family='Open Sans', weight=600),
+            hovertemplate='%{y}: %{x:,}<extra></extra>',
+            hoverlabel=dict(
+                bgcolor='white',
+                font_color='black',
+                font_size=14,
+                bordercolor=bc.IIC_BLACK
+            ),
             marker=dict(
                 color=[bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]] if selected_value else sorted_data[y_column],
                 colorscale='Reds' if not selected_value else None
@@ -717,17 +761,26 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     )
     
     fig.update_layout(
-        title=f'Number of Graduates by {x_label}',
+        title=dict(
+            text=f'Number of Graduates by {x_label}',
+            font=dict(size=16,
+                      family='Open Sans',
+                      weight=600)  # Increased title size
+        ),
         showlegend=False,
         coloraxis_showscale=False,
         xaxis_title=None,
         yaxis_title=None,
         height=chart_height,  # Keeping 500 as default but can be adjusted
-        margin=dict(l=50, r=50, t=50, b=50),
+        margin=dict(l=5, r=50, t=50, b=5),
         clickmode='event+select',
-        plot_bgcolor='white',
+        plot_bgcolor='#D5DADC',
         paper_bgcolor='white',
-        font={'color': bc.IIC_BLACK},
+        font=dict(
+            color=bc.IIC_BLACK,
+            family='Open Sans',
+            weight=600
+        ),
         modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d']
     )
     
