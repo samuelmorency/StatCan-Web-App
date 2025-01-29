@@ -274,7 +274,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     )
     
     map_card = dbc.Card([
-        dbc.CardHeader("Graduates by CMA/CA", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CA", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dl.Map(**map_args),
@@ -286,7 +286,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-4")
     
     isced_card = dbc.Card([
-        dbc.CardHeader("ISCED Level Distribution", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by ISCED Level of Education", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-isced', config={'displaylogo': False}),
@@ -297,7 +297,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     province_card = dbc.Card([
-        dbc.CardHeader("Provincial Distribution", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by Province", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-province', config={'displaylogo': False}),
@@ -308,7 +308,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     cma_card = dbc.Card([
-        dbc.CardHeader("CMA/CA Distribution", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CA", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([
@@ -323,7 +323,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
 
     credential_card = dbc.Card([
-        dbc.CardHeader("Credential Type Distribution", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by Credential Type", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dcc.Graph(id='graph-credential', config={'displaylogo': False}),
@@ -334,7 +334,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
 
     institution_card = dbc.Card([
-        dbc.CardHeader("Institution Distribution", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by Institution", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([
@@ -360,14 +360,14 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Row([
                     dbc.Col([isced_card], width=6),
                     dbc.Col([province_card], width=6)
-                ], className="mb-4"),
+                ], className="mb-2"),
                 dbc.Row([
                     dbc.Col([cma_card], width=6),
                     dbc.Col([credential_card], width=6)
-                ], className="mb-4"),
+                ], className="mb-2"),
                 dbc.Row([
-                    dbc.Col([institution_card])
-                ], className="mb-4"),
+                    dbc.Col([institution_card], width=10)
+                ], justify="center", className="mb-4"),
             ])
         ], style={'background-color': '#F1F1F1'})
     ])
