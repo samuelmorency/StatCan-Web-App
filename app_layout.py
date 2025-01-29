@@ -366,7 +366,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                     dbc.Col([credential_card], width=6)
                 ], className="mb-4"),
                 dbc.Row([
-                    dbc.Col([institution_card], width=12)
+                    dbc.Col([institution_card])
                 ], className="mb-4"),
             ])
         ], style={'background-color': '#F1F1F1'})
