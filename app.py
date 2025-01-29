@@ -32,6 +32,7 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 
 load_dotenv()
+#mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -559,7 +560,20 @@ def filter_data(data, filters):
 @monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                    selected_credentials, selected_institutions, selected_cmas):
-    """Optimized data preprocessing with caching and vectorized operations"""
+    """Optimized data preprocessing with caching and vectorized operations
+
+    Args:
+        selected_stem_bhase (_type_): _description_
+        selected_years (_type_): _description_
+        selected_provs (_type_): _description_
+        selected_isced (_type_): _description_
+        selected_credentials (_type_): _description_
+        selected_institutions (_type_): _description_
+        selected_cmas (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """    """"""
     filters = {
         'STEM/BHASE': set(selected_stem_bhase),
         'year': set(selected_years),
@@ -679,6 +693,12 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     sorted_data = dataframe.sort_values(y_column, ascending=True)
     sorted_data['text'] = sorted_data[y_column].apply(lambda x: f'{int(x):,}')
     
+    chart_height=500
+    
+    #If x_label = 'Institution' or 'CMA_CA', then chart_height=1000
+    if x_label == 'Institution' or x_label == 'Census Metropolitan Area':
+        chart_height= 50 * len(sorted_data.index)
+    
     # Create figure using go.Figure instead of px.bar
     fig = go.Figure(
         data=go.Bar(
@@ -693,7 +713,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
                 color=[bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]] if selected_value else sorted_data[y_column],
                 colorscale='Reds' if not selected_value else None
             )
-        ), layout={'height': 5000}
+        )#, layout={'height': 5000}
     )
     
     fig.update_layout(
@@ -702,7 +722,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         coloraxis_showscale=False,
         xaxis_title=None,
         yaxis_title=None,
-        height=500,  # Keeping 500 as default but can be adjusted
+        height=chart_height,  # Keeping 500 as default but can be adjusted
         margin=dict(l=50, r=50, t=50, b=50),
         clickmode='event+select',
         plot_bgcolor='white',
