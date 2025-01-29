@@ -762,19 +762,21 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         )#, layout={'height': 5000}
     )
     
+    '''
+    title=dict(
+        text=f'Number of Graduates by {x_label}',
+        font=dict(size=16,
+                  family='Open Sans',
+                  weight=600)  # Increased title size
+    ),
+    '''
     fig.update_layout(
-        title=dict(
-            text=f'Number of Graduates by {x_label}',
-            font=dict(size=16,
-                      family='Open Sans',
-                      weight=600)  # Increased title size
-        ),
         showlegend=False,
         coloraxis_showscale=False,
         xaxis_title=None,
         yaxis_title=None,
         height=chart_height,  # Keeping 500 as default but can be adjusted
-        margin=dict(l=5, r=50, t=50, b=5),
+        margin=dict(l=5, r=50, t=25, b=5),
         clickmode='event+select',
         plot_bgcolor='#D5DADC',
         paper_bgcolor='white',
