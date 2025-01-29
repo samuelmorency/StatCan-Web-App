@@ -753,6 +753,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
                 bgcolor='white',
                 font_color='black',
                 font_size=14,
+                font_family='Open Sans',
                 bordercolor=bc.IIC_BLACK
             ),
             marker=dict(
