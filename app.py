@@ -703,7 +703,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
-        'tooltip': f"CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates)}"
+        'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates):,}</div>"
     }
 
 @azure_cache_decorator(ttl=300)  # 5 minutes - visualization data

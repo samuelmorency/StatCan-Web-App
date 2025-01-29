@@ -6,3 +6,13 @@ overflow-y:scroll;
 overflow-x:hidden;
 float: left;
 }
+
+.leaflet-tooltip {
+    font-family: 'Open Sans', sans-serif !important;
+    font-weight: 600 !important;
+    padding: 8px !important;
+    background-color: white !important;
+    border: 1px solid #666 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
