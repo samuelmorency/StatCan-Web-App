@@ -731,10 +731,10 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     
     #If x_label = 'Institution' or 'CMA_CA', then chart_height=1000
     if x_label == 'Institution' or x_label == 'Census Metropolitan Area':
-        chart_height= 50 * len(sorted_data.index)
+        chart_height= 25 * len(sorted_data.index)
         # filename = replace spaces in x_label with _
-        filename = x_label.replace(' ', '_')
-        sorted_data.to_csv(filename+'.csv', index=False)
+        #filename = x_label.replace(' ', '_')
+        #sorted_data.to_csv(filename+'.csv', index=False)
     
     # Create figure using go.Figure instead of px.bar
     fig = go.Figure(
