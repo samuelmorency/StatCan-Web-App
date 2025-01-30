@@ -1,6 +1,6 @@
 ## Introduction
 
-Welcome to the Canadian STEM Graduate Analysis Dashboard! This tool helps you explore and understand graduate education trends across Canadian institutions. Whether you're looking at science and technology graduates (STEM) or graduates in business, humanities, health, arts, social science and education (BHASE), this dashboard provides insights into educational patterns across Canada.
+This tool helps you explore graduate data across Canadian educational institutions.
 
 ---
 
