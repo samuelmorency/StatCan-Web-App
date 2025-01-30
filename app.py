@@ -1700,6 +1700,36 @@ def toggle_user_guide(open_clicks, close_clicks, is_open):
         
     return is_open, dash.no_update
 
+def load_faq():
+    """Load FAQ markdown"""
+    faq_path = Path("faq.md")
+    if faq_path.exists():
+        with open(faq_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            return dcc.Markdown(content)
+    return "FAQ not available"
+
+@app.callback(
+    Output("faq-modal", "is_open"),
+    Output("faq-content", "children"),
+    [
+        Input("open-faq-button", "n_clicks"),
+        Input("close-faq-button", "n_clicks")
+    ],
+    State("faq-modal", "is_open"),
+)
+def toggle_faq(open_clicks, close_clicks, is_open):
+    """Toggle FAQ modal and load content"""
+    if not any(clicks for clicks in [open_clicks, close_clicks]):
+        raise PreventUpdate
+        
+    if open_clicks or close_clicks:
+        if not is_open:
+            return not is_open, html.Div(children=load_faq())
+        return not is_open, dash.no_update
+        
+    return is_open, dash.no_update
+
 if __name__ == '__main__':
     app.run_server(debug=True)
 

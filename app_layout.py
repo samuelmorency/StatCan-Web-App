@@ -174,6 +174,39 @@ def create_user_guide_modal():
         is_open=False,
     )
 
+def create_faq_modal():
+    """Create modal dialog for FAQ"""
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(dbc.ModalTitle("FAQ"), close_button=True),
+            dbc.ModalBody(
+                html.Div(
+                    [
+                        html.Div(
+                            html.Div(id="faq-content"),
+                            style={
+                                "maxHeight": "70vh",
+                                "overflowY": "auto",
+                                "padding": "10px"
+                            }
+                        )
+                    ]
+                )
+            ),
+            dbc.ModalFooter(
+                dbc.Button(
+                    "Close",
+                    id="close-faq-button",
+                    className="ms-auto",
+                    n_clicks=0
+                )
+            ),
+        ],
+        id="faq-modal",
+        size="lg",
+        is_open=False,
+    )
+
 logo = dbc.Navbar(
     dbc.Container(
         [
@@ -197,6 +230,13 @@ logo = dbc.Navbar(
                         dbc.Button(
                             "User Guide",
                             id="open-guide-button",
+                            color="light",
+                            className="me-2",
+                            n_clicks=0,
+                        ),
+                        dbc.Button(
+                            "FAQ",
+                            id="open-faq-button",
                             color="light",
                             className="me-2",
                             n_clicks=0,
@@ -432,7 +472,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     # Create the app layout with tabs
     app_layout = html.Div([
         logo,
-        create_user_guide_modal(),  # Add the modal
+        create_user_guide_modal(),
+        create_faq_modal(),  # Add FAQ modal
         dbc.Container([
             dbc.Tabs([
                 dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_style=ACTIVE_TAB_STYLE, label_style=TAB_STYLE),
