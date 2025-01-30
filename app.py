@@ -481,6 +481,7 @@ def load_and_process_educational_data():
                           ready for filtering and aggregation.
     """
     data = pd.read_pickle("data/cleaned_data.pkl")
+    #data.to_excel('data.xlsx')
     
     categorical_cols = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
     for col in categorical_cols:
@@ -495,6 +496,7 @@ def load_and_process_educational_data():
 # Load initial data
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
+#data.to_csv('data.csv', index=False)
 
 # Add performance monitoring decorator
 def monitor_performance(func):
@@ -868,6 +870,21 @@ isced_options_full = [{'label': level, 'value': level} for level in sorted(data.
 credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential_Type').unique())]
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
+# Extract and write values only from option dictionaries
+#def write_values_to_file(options, filename):
+    #values = [item['value'] for item in options]
+    #with open(filename, 'w') as f:
+        #for value in values:
+            #f.write(f"{value}\n")
+
+# Write all option values to respective files
+#write_values_to_file(stem_bhase_options_full, 'stem_bhase_options_full.txt')
+#write_values_to_file(year_options_full, 'year_options_full.txt')
+#write_values_to_file(prov_options_full, 'prov_options_full.txt')
+#write_values_to_file(cma_options_full, 'cma_options_full.txt')
+#write_values_to_file(isced_options_full, 'isced_options_full.txt')
+#write_values_to_file(credential_options_full, 'credential_options_full.txt')
+#write_values_to_file(institution_options_full, 'institution_options_full.txt')
 
 app.layout = html.Div([
     html.Link(
