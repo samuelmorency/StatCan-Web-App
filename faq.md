@@ -54,3 +54,58 @@ A: Try these steps:
 1. Click "Clear Selection"
 2. Click "Reset Filters"
 3. Start with broader selections
+
+# Frequently Asked Questions
+
+## Data and Filters
+
+### What years does the data cover?
+The dashboard includes data from 2019 to 2022, specifically covering academic years 2019/2020, 2020/2021, and 2021/2022.
+
+### What does STEM/BHASE mean?
+- STEM: Science, Technology, Engineering, and Mathematics
+- BHASE: Business, Humanities, Health, Arts, Social Science and Education
+
+### How can I reset all filters?
+Click the "Reset Filters" button on the left panel to restore all filters to their default values.
+
+## Features
+
+### How does cross-filtering work?
+When you click on any element (map region, chart bar), all other visualizations will update to show data related to your selection.
+
+### Can I download the data?
+Yes, in the Data Explorer tab, you can:
+1. Configure the pivot table as needed
+2. Click "Download as Displayed" to export the current view
+
+### How do I clear my selections?
+Use the "Clear Selection" button to remove any highlighted selections across all visualizations.
+
+## Technical Details
+
+### What do the different credential types mean?
+- Associate degree
+- Attestation and short program credentials
+- Certificate
+- Degree (includes applied degree)
+- Diploma
+- General Equivalency Diploma/high school diploma
+- Other program credentials
+
+### What are ISCED levels?
+ISCED (International Standard Classification of Education) levels represent different stages of education:
+- Bachelor's or equivalent
+- Doctoral or equivalent
+- Master's or equivalent
+- Post-secondary non-tertiary education
+- Short-cycle tertiary education
+- Upper secondary education
+
+## Support
+
+### How do I report issues?
+Please contact your system administrator or data team for support.
+
+### Where can I find more documentation?
+Click the "User Guide" button for detailed information about using the dashboard.

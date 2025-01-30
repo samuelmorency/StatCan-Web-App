@@ -1,10 +1,10 @@
-# Canadian STEM Graduate Analysis Dashboard
-## User Guide
+## Introduction
 
-### Introduction
 Welcome to the Canadian STEM Graduate Analysis Dashboard! This tool helps you explore and understand graduate education trends across Canadian institutions. Whether you're looking at science and technology graduates (STEM) or graduates in business, humanities, health, arts, social science and education (BHASE), this dashboard provides insights into educational patterns across Canada.
 
-### Getting Started
+---
+
+## Getting Started
 
 #### Dashboard Overview
 When you first open the dashboard, you'll see two main tabs:
@@ -20,7 +20,9 @@ The Interactive Map and Charts tab gives you a visual overview of graduate stati
 - Use "Reset Filters" to start fresh
 - Click "Clear Selection" to remove any highlighted selections
 
-### Understanding the Visualizations
+---
+
+## Understanding the Visualizations
 
 #### Map View
 The interactive map of Canada shows graduate numbers across different regions:
@@ -46,7 +48,9 @@ The Data Explorer tab offers:
 - Data download options
 - Flexible data organization
 
-### Working with Filters
+---
+
+## Working with Filters
 
 #### Available Filters
 - STEM/BHASE: Science, technology, engineering and mathematics (STEM) and Business, humanities, health, arts, social science and education (BHASE) programs
@@ -61,7 +65,9 @@ The Data Explorer tab offers:
 - Leaving a filter empty shows all options
 - Filters work together to refine your view
 
-### Interacting with Visualizations
+---
+
+## Interacting with Visualizations
 
 The dashboard offers two main ways to interact with the data:
 
@@ -81,7 +87,9 @@ The dashboard's powerful cross-filtering feature activates when you click:
 - Explore patterns across regions and categories
 - Build a complete picture of graduate trends
 
-### Analyzing Data
+---
+
+## Analyzing Data
 
 #### Basic Analysis
 1. Choose your area of interest using filters
@@ -92,11 +100,15 @@ The dashboard's powerful cross-filtering feature activates when you click:
 - Cross-filter by clicking map and chart elements
 - Create custom reports in Data Explorer
 
-### Tips and Best Practices
+---
+
+## Tips and Best Practices
 - Use "Reset Filters" and "Clear Selection" to start fresh
 - Use the Data Explorer for detailed analysis and data export
 
-### Data Coverage
+---
+
+## Data Coverage
 - Years: 2019-2022
 - Major metropolitan areas
 - Public post-secondary institutions

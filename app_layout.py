@@ -4,6 +4,7 @@ import brand_colours as bc
 from dash_extensions.javascript import assign
 import dash_leaflet as dl
 from dash_pivottable import PivotTable
+from faq import faq
 
 IIC_LOGO = "assets/logo.png"
 
@@ -165,7 +166,12 @@ def create_user_guide_modal():
                     "Close",
                     id="close-guide-button",
                     className="ms-auto",
-                    n_clicks=0
+                    n_clicks=0,
+                    style = {
+                        "background-color": bc.MAIN_RED,
+                        "color": "white",
+                        **button_format
+                    }
                 )
             ),
         ],
@@ -174,16 +180,37 @@ def create_user_guide_modal():
         is_open=False,
     )
 
+faq_div_contents = []
+
+#loop through each key value pair in the faq dictionary
+for key, value in faq.items():
+    faq_div_contents.extend([
+        html.H3(key),
+        dbc.Accordion(
+            [
+                dbc.AccordionItem(
+                    dcc.Markdown(value[subkey]),
+                    title=html.H5(subkey)
+                ) for subkey in value
+            ],
+            start_collapsed=True, className="mb-4"
+        )
+    ])
+
+
+
+#faq_accordion = dbc.Accordion()
+
 def create_faq_modal():
     """Create modal dialog for FAQ"""
     return dbc.Modal(
         [
-            dbc.ModalHeader(dbc.ModalTitle("FAQ"), close_button=True),
+            dbc.ModalHeader(dbc.ModalTitle("Frequently Asked Questions"), close_button=True),
             dbc.ModalBody(
                 html.Div(
                     [
                         html.Div(
-                            html.Div(id="faq-content"),
+                            html.Div(faq_div_contents, id="faq-content"),
                             style={
                                 "maxHeight": "70vh",
                                 "overflowY": "auto",
@@ -198,7 +225,12 @@ def create_faq_modal():
                     "Close",
                     id="close-faq-button",
                     className="ms-auto",
-                    n_clicks=0
+                    n_clicks=0,
+                    style = {
+                        "background-color": bc.MAIN_RED,
+                        "color": "white",
+                        **button_format
+                    }
                 )
             ),
         ],
@@ -230,16 +262,24 @@ logo = dbc.Navbar(
                         dbc.Button(
                             "User Guide",
                             id="open-guide-button",
-                            color="light",
                             className="me-2",
                             n_clicks=0,
+                            style = {
+                                "background-color": bc.MAIN_RED,
+                                "color": "white",
+                                **button_format
+                            }
                         ),
                         dbc.Button(
                             "FAQ",
                             id="open-faq-button",
-                            color="light",
                             className="me-2",
                             n_clicks=0,
+                            style = {
+                                "background-color": bc.MAIN_RED,
+                                "color": "white",
+                                **button_format
+                            }
                         )
                     ],
                     className="ms-auto",
