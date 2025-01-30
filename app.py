@@ -29,9 +29,9 @@ from functools import wraps
 import threading
 from collections import defaultdict
 import plotly.graph_objects as go
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
-load_dotenv()
+#load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
 # Configure logging
