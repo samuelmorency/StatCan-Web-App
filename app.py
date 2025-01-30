@@ -29,6 +29,7 @@ from functools import wraps
 import threading
 from collections import defaultdict
 import plotly.graph_objects as go
+from pathlib import Path
 #from dotenv import load_dotenv
 
 #load_dotenv()
@@ -1664,6 +1665,40 @@ app.clientside_callback(
     Output("map", "id"),
     Input("map", "id")
 )
+
+def load_user_guide():
+    """Load user guide markdown"""
+    user_guide_path = Path("user_guide.md")
+    if user_guide_path.exists():
+        with open(user_guide_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            return dcc.Markdown(content)
+    return "User guide not available"
+
+@app.callback(
+    Output("user-guide-modal", "is_open"),
+    Output("user-guide-content", "children"),
+    [
+        Input("open-guide-button", "n_clicks"),
+        Input("close-guide-button", "n_clicks")
+    ],
+    State("user-guide-modal", "is_open"),
+)
+def toggle_user_guide(open_clicks, close_clicks, is_open):
+    """Toggle user guide modal and load content"""
+    if not any(clicks for clicks in [open_clicks, close_clicks]):
+        raise PreventUpdate
+        
+    if open_clicks or close_clicks:
+        if not is_open:
+            # Only load content when opening
+            return not is_open, html.Div(
+                #dangerously_allow_html=True,
+                children=load_user_guide()
+            )
+        return not is_open, dash.no_update
+        
+    return is_open, dash.no_update
 
 if __name__ == '__main__':
     app.run_server(debug=True)
