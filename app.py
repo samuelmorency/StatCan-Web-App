@@ -779,7 +779,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         height=chart_height,  # Keeping 500 as default but can be adjusted
         margin=dict(l=5, r=50, t=25, b=5),
         clickmode='event+select',
-        plot_bgcolor='#D5DADC',
+        plot_bgcolor='#f1f3f3',
         paper_bgcolor='white',
         font=dict(
             color=bc.IIC_BLACK,
