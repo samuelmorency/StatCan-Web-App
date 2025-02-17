@@ -29,10 +29,9 @@ from functools import wraps
 import threading
 from collections import defaultdict
 import plotly.graph_objects as go
-from pathlib import Path
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-#load_dotenv()
+load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
 # Configure logging
@@ -180,8 +179,7 @@ app = Dash(
     external_stylesheets=[
         dbc.themes.BOOTSTRAP,
         # Add Google Fonts link for Open Sans SemiBold
-        'https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap',
-        dbc.icons.BOOTSTRAP
+        'https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap'
     ]
 )
 
@@ -483,7 +481,6 @@ def load_and_process_educational_data():
                           ready for filtering and aggregation.
     """
     data = pd.read_pickle("data/cleaned_data.pkl")
-    #data.to_excel('data.xlsx')
     
     categorical_cols = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
     for col in categorical_cols:
@@ -498,7 +495,6 @@ def load_and_process_educational_data():
 # Load initial data
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
-#data.to_csv('data.csv', index=False)
 
 # Add performance monitoring decorator
 def monitor_performance(func):
@@ -783,7 +779,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         height=chart_height,  # Keeping 500 as default but can be adjusted
         margin=dict(l=5, r=50, t=25, b=5),
         clickmode='event+select',
-        plot_bgcolor='#f1f3f3',
+        plot_bgcolor='#D5DADC',
         paper_bgcolor='white',
         font=dict(
             color=bc.IIC_BLACK,
@@ -872,21 +868,6 @@ isced_options_full = [{'label': level, 'value': level} for level in sorted(data.
 credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential_Type').unique())]
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
-# Extract and write values only from option dictionaries
-#def write_values_to_file(options, filename):
-    #values = [item['value'] for item in options]
-    #with open(filename, 'w') as f:
-        #for value in values:
-            #f.write(f"{value}\n")
-
-# Write all option values to respective files
-#write_values_to_file(stem_bhase_options_full, 'stem_bhase_options_full.txt')
-#write_values_to_file(year_options_full, 'year_options_full.txt')
-#write_values_to_file(prov_options_full, 'prov_options_full.txt')
-#write_values_to_file(cma_options_full, 'cma_options_full.txt')
-#write_values_to_file(isced_options_full, 'isced_options_full.txt')
-#write_values_to_file(credential_options_full, 'credential_options_full.txt')
-#write_values_to_file(institution_options_full, 'institution_options_full.txt')
 
 app.layout = html.Div([
     html.Link(
@@ -1667,60 +1648,6 @@ app.clientside_callback(
     Input("map", "id")
 )
 
-def load_user_guide():
-    """Load user guide markdown"""
-    user_guide_path = Path("user_guide.md")
-    if user_guide_path.exists():
-        with open(user_guide_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            return dcc.Markdown(content)
-    return "User guide not available"
-
-@app.callback(
-    Output("user-guide-modal", "is_open"),
-    Output("user-guide-content", "children"),
-    [
-        Input("open-guide-button", "n_clicks"),
-        Input("close-guide-button", "n_clicks")
-    ],
-    State("user-guide-modal", "is_open"),
-)
-def toggle_user_guide(open_clicks, close_clicks, is_open):
-    """Toggle user guide modal and load content"""
-    if not any(clicks for clicks in [open_clicks, close_clicks]):
-        raise PreventUpdate
-        
-    if open_clicks or close_clicks:
-        if not is_open:
-            # Only load content when opening
-            return not is_open, html.Div(
-                #dangerously_allow_html=True,
-                children=load_user_guide()
-            )
-        return not is_open, dash.no_update
-        
-    return is_open, dash.no_update
-
-@app.callback(
-    Output("faq-modal", "is_open"),
-    [
-        Input("open-faq-button", "n_clicks"),
-        Input("close-faq-button", "n_clicks")
-    ],
-    State("faq-modal", "is_open"),
-)
-def toggle_faq(open_clicks, close_clicks, is_open):
-    """Toggle FAQ modal and load content"""
-    if not any(clicks for clicks in [open_clicks, close_clicks]):
-        raise PreventUpdate
-        
-    if open_clicks or close_clicks:
-        if not is_open:
-            return not is_open
-        return not is_open
-        
-    return is_open
-
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
 

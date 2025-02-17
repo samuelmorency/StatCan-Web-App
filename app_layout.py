@@ -4,9 +4,13 @@ import brand_colours as bc
 from dash_extensions.javascript import assign
 import dash_leaflet as dl
 from dash_pivottable import PivotTable
-from faq import faq
 
 IIC_LOGO = "assets/logo.png"
+
+CANADA_BOUNDS = [
+    [36.676556, -141.001735],  # Southwest corner
+    [68.110626, -52.620422]    # Northeast corner
+]
 
 TAB_STYLE = {
     "backgroundColor": "#cccccc", 
@@ -124,6 +128,10 @@ map_args = dict(
     zoom=4,
     children=[tile_layer, geo_json],
     style={'width': '100%', 'height': '600px'},
+    maxBounds=CANADA_BOUNDS,          # Add bounds restriction
+    maxBoundsViscosity=1.0,           # Makes the bounds "sticky"
+    minZoom=4,                        # Set minimum zoom level
+    #maxZoom=10,                       # Set maximum zoom level
 )
 
 # make a reuseable navitem for the different examples
@@ -141,103 +149,6 @@ dropdown = dbc.DropdownMenu(
     in_navbar=True,
     label="Menu",
 )
-
-def create_user_guide_modal():
-    """Create modal dialog for user guide"""
-    return dbc.Modal(
-        [
-            dbc.ModalHeader(dbc.ModalTitle("User Guide"), close_button=True),
-            dbc.ModalBody(
-                html.Div(
-                    [
-                        html.Div(
-                            html.Div(id="user-guide-content"),
-                            style={
-                                "maxHeight": "70vh",
-                                "overflowY": "auto",
-                                "padding": "10px"
-                            }
-                        )
-                    ]
-                )
-            ),
-            dbc.ModalFooter(
-                dbc.Button(
-                    "Close",
-                    id="close-guide-button",
-                    className="ms-auto",
-                    n_clicks=0,
-                    style = {
-                        "background-color": bc.MAIN_RED,
-                        "color": "white",
-                        **button_format
-                    }
-                )
-            ),
-        ],
-        id="user-guide-modal",
-        size="lg",
-        is_open=False,
-    )
-
-faq_div_contents = []
-
-#loop through each key value pair in the faq dictionary
-for key, value in faq.items():
-    faq_div_contents.extend([
-        html.H3(key),
-        dbc.Accordion(
-            [
-                dbc.AccordionItem(
-                    dcc.Markdown(value[subkey]),
-                    title=html.H5(subkey)
-                ) for subkey in value
-            ],
-            start_collapsed=True, className="mb-4"
-        )
-    ])
-
-
-
-#faq_accordion = dbc.Accordion()
-
-def create_faq_modal():
-    """Create modal dialog for FAQ"""
-    return dbc.Modal(
-        [
-            dbc.ModalHeader(dbc.ModalTitle("Frequently Asked Questions"), close_button=True),
-            dbc.ModalBody(
-                html.Div(
-                    [
-                        html.Div(
-                            html.Div(faq_div_contents, id="faq-content"),
-                            style={
-                                "maxHeight": "70vh",
-                                "overflowY": "auto",
-                                "padding": "10px"
-                            }
-                        )
-                    ]
-                )
-            ),
-            dbc.ModalFooter(
-                dbc.Button(
-                    "Close",
-                    id="close-faq-button",
-                    className="ms-auto",
-                    n_clicks=0,
-                    style = {
-                        "background-color": bc.MAIN_RED,
-                        "color": "white",
-                        **button_format
-                    }
-                )
-            ),
-        ],
-        id="faq-modal",
-        size="lg",
-        is_open=False,
-    )
 
 logo = dbc.Navbar(
     dbc.Container(
@@ -258,30 +169,7 @@ logo = dbc.Navbar(
             dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
             dbc.Collapse(
                 dbc.Nav(
-                    [
-                        dbc.Button(
-                            "User Guide",
-                            id="open-guide-button",
-                            className="me-2",
-                            n_clicks=0,
-                            style = {
-                                "background-color": bc.MAIN_RED,
-                                "color": "white",
-                                **button_format
-                            }
-                        ),
-                        dbc.Button(
-                            "FAQ",
-                            id="open-faq-button",
-                            className="me-2",
-                            n_clicks=0,
-                            style = {
-                                "background-color": bc.MAIN_RED,
-                                "color": "white",
-                                **button_format
-                            }
-                        )
-                    ],
+                    [nav_item, dropdown],
                     className="ms-auto",
                     navbar=True,
                 ),
@@ -512,8 +400,6 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     # Create the app layout with tabs
     app_layout = html.Div([
         logo,
-        create_user_guide_modal(),
-        create_faq_modal(),  # Add FAQ modal
         dbc.Container([
             dbc.Tabs([
                 dbc.Tab(visualization_content, label="Interactive Map and Charts", tab_id="tab-visualization", active_label_style=ACTIVE_TAB_STYLE, label_style=TAB_STYLE),
