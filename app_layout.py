@@ -4,6 +4,7 @@ import brand_colours as bc
 from dash_extensions.javascript import assign
 import dash_leaflet as dl
 from dash_pivottable import PivotTable
+import dash_mantine_components as dmc
 
 IIC_LOGO = "assets/logo.png"
 
@@ -58,13 +59,14 @@ checklist_format = {
 
 multi_dropdown_format = {
     "value": [],
-    "multi": True,
-    "placeholder": "All",
     "searchable": True,
+    "placeholder": "All",
     "style": {
-        "margin-bottom": "15px",
-        "font-family": 'Open Sans',
-        "font-weight": "600"
+        "marginBottom": "15px",
+    },
+    "styles": {
+        "input": {"fontFamily": "Open Sans", "fontWeight": 600},
+        "item": {"fontFamily": "Open Sans", "fontWeight": 600},
     }
 }
 
@@ -184,14 +186,23 @@ logo = dbc.Navbar(
     className="mb-0",
 )
 
-
-
 def filter_args(id, options, format):
     return {
         "id": id,
         "options": options,
         "value": [option['value'] for option in options],
         **format
+    }
+
+# New function for Mantine MultiSelect component which uses 'data' not 'options'
+def mantine_filter_args(id, options, format):
+    # Convert options from dash format to mantine format
+    data = [{"value": option['value'], "label": option['label']} for option in options]
+    return {
+        "id": id,
+        "data": data,
+        "value": [option['value'] for option in options],
+        **{k: v for k, v in format.items() if k != 'options'}  # Remove 'options' if present
     }
 
 def button_args(id, background_color, color, format):
@@ -226,11 +237,14 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     # ...existing code...
     stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = filter_args("year-filter", year_options_full, checklist_format)
-    prov_args = filter_args("prov-filter", prov_options_full, multi_dropdown_format)
-    isced_args = filter_args("isced-filter", isced_options_full, multi_dropdown_format)
-    credential_args = filter_args("credential-filter", credential_options_full, multi_dropdown_format)
-    institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
-    cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)
+    
+    # Use mantine_filter_args for Mantine components
+    prov_args = mantine_filter_args("prov-filter", prov_options_full, multi_dropdown_format)
+    isced_args = mantine_filter_args("isced-filter", isced_options_full, multi_dropdown_format)
+    credential_args = mantine_filter_args("credential-filter", credential_options_full, multi_dropdown_format)
+    institution_args = mantine_filter_args("institution-filter", institution_options_full, multi_dropdown_format)
+    cma_args = mantine_filter_args("cma-filter", cma_options_full, multi_dropdown_format)
+    
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
     clear_selection_args = button_args("clear-selection", "danger", bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
@@ -258,15 +272,15 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                     "borderColor": bc.MAIN_RED,
                 }),
                 html.Label("Province:", style=LABEL_STYLE),
-                dcc.Dropdown(**prov_args),
+                dmc.MultiSelect(**prov_args),
                 html.Label("Census Metropolitan Area/Census Agglomeration:", style=LABEL_STYLE),
-                dcc.Dropdown(**cma_args),
+                dmc.MultiSelect(**cma_args),
                 html.Label("ISCED Level:", style=LABEL_STYLE),
-                dcc.Dropdown(**isced_args),
+                dmc.MultiSelect(**isced_args),
                 html.Label("Credential Type:", style=LABEL_STYLE),
-                dcc.Dropdown(**credential_args),
+                dmc.MultiSelect(**credential_args),
                 html.Label("Institution:", style=LABEL_STYLE),
-                dcc.Dropdown(**institution_args),
+                dmc.MultiSelect(**institution_args),
                 #dbc.Button('Reset Filters', **reset_filters_args),
                 dbc.Button('Reset Filters', id='reset-filters', color="secondary", className="me-1"),
                 #dbc.Button('Clear Selection', **clear_selection_args, outline=True),
@@ -409,5 +423,3 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         ], className="bg-dark", style=APP_STYLE)
 
     return app_layout
-
-
