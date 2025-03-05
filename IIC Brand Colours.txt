@@ -1,0 +1,50 @@
+Palettes generated here: https://mantine.dev/colors-generator/
+
+FOCUS COLOUR
+    Main red:  #C01823
+        Palette: #ffeaec, #fdd4d7, #f4a7ac, #ed767e, #e74e57, #e4353e, #e32632, #ca1925, #b5121f, #9e0319
+
+RED PALETTE
+    Dark Red:  #7F2629
+        Palette: #faeff0, #eedcdd, #e0b5b7, #d38c8e, #c9696b, #c35355, #c0484a, #aa3a3b, #983234, #85282b
+    Bright Red:  #E1251B
+        Palette: #ffeae9, #fed5d3, #f6aaa6, #ee7b75, #e9544c, #e53b31, #e52d24, #cb2017, #b61813, #a00c0d
+    Coral:  #AE1857
+        Palette: #ffebf5, #f9d5e4, #f1a9c7, #e979a8, #e3528e, #df3a7d, #de2d75, #c62064, #b11859, #9c094c
+
+GREYSCALE PALETTE
+    IIC Black:  #24272A
+    Grey:  #54575A
+    Light Grey:  #97989A
+
+SUPPORTING BLUE PALETTE
+    Dark Blue: #00758D
+        Palette: #ebfcff, #d7f5fc, #a9ecfa, #7ce3f9, #5fdaf8, #52d5f7, #4ad3f8, #3dbbdd, #2da6c6, #0090ad
+    Main Blue: #008FBE
+        Palette: #e4fbff, #d0f3ff, #a0e6fd, #6fd8fc, #4cccfb, #3ac5fa, #2ec2fb, #1eaae1, #0098c9, #0083b2
+    Light Blue: #B8D8EB
+        Palette: #e7f8ff, #d7ebf7, #b1d4e9, #88bddc, #66a8d0, #509cca, #4295c8, #3282b1, #2573a0, #06648e
+
+SUPPORTING ORANGE PALETTE
+    Dark Orange: #D2451E
+        Palette: #ffeee8, #fcdcd4, #f3b8a8, #eb9179, #e47150, #e15c37, #e05129, #c7411c, #b23817, #9c2d10
+    Main Orange: #FF6B00
+        Palette: #fff2e2, #ffe3cc, #ffc59a, #ffa564, #fe8a37, #fe791a, #ff7009, #e45f00, #cb5300, #b14500
+    Light Orange: #FFA400
+        Palette: #fff7e1, #ffeecb, #ffdb9a, #ffc864, #ffb738, #ffad1b, #ffa709, #e39200, #cb8100, #b06e00
+
+SUPPORTING GREEN PALETTE
+    Dark Green: #4D7F71
+        Palette: #ecf9f6, #e1edea, #c4d9d3, #a3c4ba, #88b2a6, #76a699, #6ba192, #598d7e, #4c7d70, #3a6d5f
+    Main Green: #6BCBB8
+        Palette: #e3fdf8, #d5f4ee, #b2e6dc, #8bd7c8, #6acbb7, #54c3ad, #46bfa8, #34a892, #269682, #04826f
+    Light Green: #B2E1D8
+        Palette: #e7fcf8, #daf3ee, #b7e3db, #92d3c7, #72c6b6, #5ebeab, #51baa5, #40a390, #329280, #1c7e6e
+
+SUPPORTING PURPLE PALETTE
+    Dark Purple: #4D4084
+        Palette: #f3f1fd, #e2dff0, #c3bcdc, #a197c9, #8578b9, #7364af, #6a5aac, #594a97, #4f4288, #443879
+    Purple: #7E57C5
+        Palette: #f5eeff, #e5dbf7, #c7b5e8, #a78cd8, #8c69cb, #7b53c4, #7348c1, #613aab, #563299, #4a2a88
+    Light Purple: #B6B8DD
+        Palette: #f0f1ff, #dedff3, #bbbddf, #9699cd, #767abd, #6266b3, #585cb0, #484c9b, #3f448c, #343a7c
