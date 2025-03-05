@@ -22,4 +22,4 @@ flask==3.0.3
 dash-ag-grid>=2.0.0
 dash-pivottable==0.0.2
 dash-iconify==0.1.2
-dash_mantine_components==0.15.3
+dash-mantine-components==0.15.3
