@@ -49,14 +49,16 @@ CARD_HEADER_STYLE = {
 LABEL_STYLE = {
     "font-family": 'Open Sans',
     "font-weight": "600",
-    "margin-bottom": "5px",
-    "margin-top": "10px"
+    "margin-bottom": "3px",
+    "margin-top": "8px",
+    "font-size": "16px"
 }
 
 checklist_format = {
-    "inputStyle": {"margin-right": "5px", "margin-left": "20px"},
-    "style": {"margin-bottom": "15px"}
+    "inputStyle": {"margin-right": "4px", "margin-left": "16px"},  # Reduced margins
+    "style": {"margin-bottom": "12px", "font-size": "14px"}        # Added font size and reduced margin
 }
+
 
 multi_dropdown_format = {
     "value": [],
@@ -64,9 +66,10 @@ multi_dropdown_format = {
     "placeholder": "All",
     "searchable": True,
     "style": {
-        "margin-bottom": "15px",
+        "margin-bottom": "12px",
         "font-family": 'Open Sans',
-        "font-weight": "600"
+        "font-weight": "600",
+        "font-size": "12px"
     }
 }
 
