@@ -1,18 +1,19 @@
 import dash_mantine_components as dmc
-from dash import Dash, _dash_renderer
-_dash_renderer._set_react_version("18.2.0")
+import dash
+from dash import Dash, Input, Output, callback, html
+from dash.exceptions import PreventUpdate
+from brand_colours import DMC_COLOURS
 
-app = Dash(external_stylesheets=dmc.styles.ALL)
+from datetime import date
+
+dash._dash_renderer._set_react_version("18.2.0")
+
+app = Dash(__name__, external_stylesheets=dmc.styles.ALL)
 
 theme = {
-    "primaryColor": "#C01823",
+    "primaryColor": "MainRed",
     "fontFamily": "'Open Sans', sans-serif",
-    "colors": {
-         # add your colors
-        "deepBlue": ["#ffeaec", "#fdd4d7", "#f4a7ac", "#ed767e", "#e74e57", "#e4353e", "#e32632", "#ca1925", "#b5121f", "#9e0319"], # 10 colors
-        # or replace default theme color
-        "blue": ["#E9EDFC", "#C1CCF6", "#99ABF0" "..."],   # 10 colors
-    },
+    "colors": DMC_COLOURS,
     "components": {
         "Button": {"defaultProps": {"fw": 400}},
         "Alert": {"styles": {"title": {"fontWeight": 500}}},
@@ -36,9 +37,27 @@ app.layout = dmc.MantineProvider(
      forceColorScheme="light",
      theme=theme,
      children=[
-         # content
+         dmc.DatePickerInput(
+            id="date-picker",
+            label="Start Date",
+            description="You can also provide a description",
+            minDate=date(2020, 8, 5),
+            value=None,
+            w=200
+        ),
+        dmc.Space(h=10),
+        dmc.Text(id="selected-date"),
      ],
  )
 
+@callback(Output("selected-date", "children"), Input("date-picker", "value"))
+def update_output(d):
+    prefix = "You have selected: "
+    if d:
+        return prefix + d
+    else:
+        raise PreventUpdate
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run_server(debug=True)
