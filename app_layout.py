@@ -8,6 +8,12 @@ from faq import faq
 
 IIC_LOGO = "assets/logo.png"
 
+CANADA_BOUNDS = [
+    [36.676556, -141.001735],  # Southwest corner
+    [68.110626, -52.620422]    # Northeast corner
+]
+
+
 TAB_STYLE = {
     "backgroundColor": "#cccccc", 
     "borderColor": "#F1F1F1", 
@@ -124,6 +130,10 @@ map_args = dict(
     zoom=4,
     children=[tile_layer, geo_json],
     style={'width': '100%', 'height': '600px'},
+    maxBounds=CANADA_BOUNDS,          # Add bounds restriction
+    maxBoundsViscosity=1.0,           # Makes the bounds "sticky"
+    minZoom=4,                        # Set minimum zoom level
+    #maxZoom=10,                       # Set maximum zoom level
 )
 
 # make a reuseable navitem for the different examples

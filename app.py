@@ -181,7 +181,7 @@ app = Dash(
         dbc.themes.BOOTSTRAP,
         # Add Google Fonts link for Open Sans SemiBold
         'https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap',
-        dbc.icons.BOOTSTRAP
+        #dbc.icons.BOOTSTRAP
     ]
 )
 
@@ -783,7 +783,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
         height=chart_height,  # Keeping 500 as default but can be adjusted
         margin=dict(l=5, r=50, t=25, b=5),
         clickmode='event+select',
-        plot_bgcolor='#f1f3f3',
+        plot_bgcolor='#D5DADC',
         paper_bgcolor='white',
         font=dict(
             color=bc.IIC_BLACK,
@@ -1722,5 +1722,5 @@ def toggle_faq(open_clicks, close_clicks, is_open):
     return is_open
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
 
