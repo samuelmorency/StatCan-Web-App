@@ -30,9 +30,6 @@ import threading
 from collections import defaultdict
 import plotly.graph_objects as go
 from dotenv import load_dotenv
-import dash_mantine_components as dmc
-
-dash._dash_renderer._set_react_version("18.2.0")
 
 load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
@@ -872,30 +869,15 @@ credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(dat
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
 
-app.layout = dmc.MantineProvider(
-    theme={
-        "fontFamily": "'Open Sans', sans-serif",
-        "primaryColor": "red",
-        "components": {
-            "MultiSelect": {
-                "styles": {
-                    "input": {"fontWeight": 600},
-                    "item": {"fontWeight": 600}
-                }
-            }
-        }
-    },
-    #inherit=True,
-    children=[
-        html.Link(
-            rel='stylesheet',
-            href='/assets/assets/pivottable.css'
-        ),
-        dcc.Store(id='client-data-store', storage_type='session'),
-        dcc.Store(id='client-filters-store', storage_type='local'),
-        create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
-    ]
-)
+app.layout = html.Div([
+    html.Link(
+        rel='stylesheet',
+        href='/assets/assets/pivottable.css'
+    ),
+    dcc.Store(id='client-data-store', storage_type='session'),
+    dcc.Store(id='client-filters-store', storage_type='local'),
+    create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
+])
 
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """
