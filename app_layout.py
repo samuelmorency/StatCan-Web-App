@@ -272,6 +272,11 @@ logo = dbc.Navbar(
             dbc.Collapse(
                 dbc.Nav(
                     [
+                        html.Div(
+                            "The Canadian Centre for Education Statistics (CCES) at Statistics Canada by CSBP. July 2024.",
+                            className="me-3 text-light d-flex align-items-center",
+                            style={"font-size": "12px", "font-style": "italic"}
+                        ),
                         dbc.Button(
                             "User Guide",
                             id="open-guide-button",
