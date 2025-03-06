@@ -790,6 +790,11 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
             family='Open Sans',
             weight=600
         ),
+        yaxis=dict(
+            ticksuffix='  ',  # Add space after tick labels
+            separatethousands=True,
+            automargin=True,  # Automatically adjust margins
+        ),
         modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d']
     )
     
