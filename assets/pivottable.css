@@ -1,5 +1,5 @@
 .pvtUi {
-    color: #24272A; /* Using IIC_BLACK */
+    color: black; /* Using IIC_BLACK */
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
     border-collapse: collapse;
