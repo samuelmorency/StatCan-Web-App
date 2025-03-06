@@ -8,7 +8,7 @@ trigger:
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
-  azureServiceConnectionId: 'fb8beb10-bc91-4065-a5b8-c5d8e0203f79'
+  azureServiceConnectionId: '12f7e491-a0ec-4ae2-898e-92a6c62c0eac'
 
   # Web app name
   webAppName: 'stem-bhase-graduates'
