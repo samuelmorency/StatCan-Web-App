@@ -515,7 +515,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     table_content = dbc.Row([
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader(dbc.Button("Download as Displayed", id='download-button', style={'background-color': 'black', 'borderColor': 'black'})),
+                dbc.CardHeader(dbc.Button("Download as Displayed", id='download-button', style={'background-color': bc.MAIN_RED, 'borderColor': bc.MAIN_RED})),
                 dbc.CardBody([          
                     
                     dcc.Download(id="download-data"),
