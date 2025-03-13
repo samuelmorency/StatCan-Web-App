@@ -1189,65 +1189,47 @@ app.layout = html.Div([
     create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
 ])
 
-# Add with other utility functions
-
 def measure_callback_performance(name):
     """
-    Decorator to measure and log the performance of callbacks.
-    
-    Parameters:
-        name (str): Name identifier for the callback in logs
-        
-    Returns:
-        function: Decorated callback function with performance measurement
+    Enhanced decorator to measure and log the performance of callbacks.
+    Includes detailed diagnostic information about the callback execution.
     """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not OPTIMIZATION_CONFIG['measure_performance']:
-                return func(*args, **kwargs)
-                
             start = perf_counter()
-            result = func(*args, **kwargs)
-            duration = perf_counter() - start
             
-            # Log performance data
-            is_patch = any(isinstance(r, Patch) for r in result 
-                          if r is not None and r is not dash.no_update)
-            patch_str = "[PATCH]" if is_patch else "[FULL]"
-            logger.info(f"{patch_str} {name}: {duration:.4f}s")
+            # Log the start of the callback with argument counts
+            logger.info(f"=== Starting {name} callback with {len(args)} arguments ===")
             
-            return result
-        return wrapper
-    return decorator
-
-def measure_callback_performance(name):
-    """
-    Decorator to measure and log the performance of callbacks.
-    
-    Parameters:
-        name (str): Name identifier for the callback in logs
-        
-    Returns:
-        function: Decorated callback function with performance measurement
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if not OPTIMIZATION_CONFIG['measure_performance']:
-                return func(*args, **kwargs)
+            try:
+                result = func(*args, **kwargs)
+                duration = perf_counter() - start
                 
-            start = perf_counter()
-            result = func(*args, **kwargs)
-            duration = perf_counter() - start
-            
-            # Log performance data
-            is_patch = any(isinstance(r, Patch) for r in result 
-                          if r is not None and r is not dash.no_update)
-            patch_str = "[PATCH]" if is_patch else "[FULL]"
-            logger.info(f"{patch_str} {name}: {duration:.4f}s")
-            
-            return result
+                # Log success with result types
+                result_types = []
+                for i, res in enumerate(result if isinstance(result, tuple) else [result]):
+                    if res is dash.no_update:
+                        result_types.append(f"Output {i}: no_update")
+                    elif isinstance(res, Patch):
+                        result_types.append(f"Output {i}: Patch")
+                    elif isinstance(res, dict) and res:
+                        result_types.append(f"Output {i}: {type(res).__name__} (non-empty)")
+                    elif isinstance(res, dict) and not res:
+                        result_types.append(f"Output {i}: EMPTY dict")
+                    else:
+                        result_types.append(f"Output {i}: {type(res).__name__}")
+                
+                logger.info(f"✅ {name} completed in {duration:.4f}s")
+                logger.info(f"Return values: {', '.join(result_types)}")
+                return result
+                
+            except Exception as e:
+                duration = perf_counter() - start
+                logger.error(f"❌ {name} failed after {duration:.4f}s: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise
+                
         return wrapper
     return decorator
 
