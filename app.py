@@ -32,6 +32,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 from dash.dependencies import MATCH, ALL
 import json
+from optimization_config import OPTIMIZATION_CONFIG
 #from dotenv import load_dotenv
 
 #load_dotenv()
