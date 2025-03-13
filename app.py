@@ -974,175 +974,47 @@ def update_selected_feature(click_data, n_clicks, stored_cma):
         
     return stored_cma
 
-@app.callback(
-    Output('selected-isced', 'data'),
-    Input('graph-isced', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-isced', 'data'),
-    State('graph-isced', 'figure'),
-    prevent_initial_call=True
-)
-def update_selected_isced(clickData, n_clicks, stored_isced, figure):
+def create_chart_selection_callback(graph_id, store_id):
     """
-    Updates the selected ISCED level when the user interacts with the ISCED chart.
-    If a slice or bar is clicked, this updates the selected ISCED level. If 'Clear
-    Selection' is clicked, it resets the selection. Maintains synchronization with
-    chart interactions.
-
-    Args:
-        clickData (dict or None): Data from a chart click event that includes the selected category.
-        n_clicks (int): The count of 'Clear Selection' button clicks.
-        stored_isced (str or None): The currently selected ISCED level.
-        figure (dict): The current figure object to determine chart orientation.
-
-    Returns:
-        str or None: The updated selected ISCED level or None if the selection is cleared.
-    """
-    ctx_manager = CallbackContextManager(callback_context)
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-
-    return update_selected_value(
-        click_data=clickData,
-        n_clicks=n_clicks,
-        stored_value=stored_isced,
-        triggered_id=ctx_manager.triggered_id,
-        clear_id='clear-selection',
-        chart_id='graph-isced',
-        figure=figure
-    )
-
-@app.callback(
-    Output('selected-province', 'data'),
-    Input('graph-province', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-province', 'data'),
-    State('graph-province', 'figure'),
-    prevent_initial_call=True
-)
-def update_selected_province(clickData, n_clicks, stored_province, figure):
-    """
-    Updates the selected province when the user interacts with the province chart.
-    If a bar or slice is clicked, the selection updates accordingly. If 'Clear Selection'
-    is clicked, the selection is reset. The function also interprets chart orientation
-    to determine which axis value corresponds to the province.
-
-    Args:
-        clickData (dict or None): Data from a chart click event that includes the clicked province.
-        n_clicks (int): The count of 'Clear Selection' button clicks.
-        stored_province (str or None): The currently selected province.
-        figure (dict): The current figure object to determine chart orientation.
-
-    Returns:
-        str or None: The updated selected province or None if the selection is cleared.
-    """
-    ctx_manager = CallbackContextManager(callback_context)
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-
-    return update_selected_value(
-        click_data=clickData,
-        n_clicks=n_clicks,
-        stored_value=stored_province,
-        triggered_id=ctx_manager.triggered_id,
-        clear_id='clear-selection',
-        chart_id='graph-province',
-        figure=figure
-    )
-
-# Add new callback for credential selection
-@app.callback(
-    Output('selected-credential', 'data'),
-    Input('graph-credential', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-credential', 'data'),
-    State('graph-credential', 'figure'),
-    prevent_initial_call=True
-)
-def update_selected_credential(clickData, n_clicks, stored_credential, figure):
-    ctx_manager = CallbackContextManager(callback_context)
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-
-    return update_selected_value(
-        click_data=clickData,
-        n_clicks=n_clicks,
-        stored_value=stored_credential,
-        triggered_id=ctx_manager.triggered_id,
-        clear_id='clear-selection',
-        chart_id='graph-credential',
-        figure=figure
-    )
-
-@app.callback(
-    Output('selected-cma', 'data'),
-    Input('graph-cma', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-cma', 'data'),
-    State('graph-cma', 'figure'),
-    prevent_initial_call=True
-)
-def update_selected_cma(clickData, n_clicks, stored_credential, figure):
-    ctx_manager = CallbackContextManager(callback_context)
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-
-    return update_selected_value(
-        click_data=clickData,
-        n_clicks=n_clicks,
-        stored_value=stored_credential,
-        triggered_id=ctx_manager.triggered_id,
-        clear_id='clear-selection',
-        chart_id='graph-cma',
-        figure=figure
-    )
-
-# Add new callback for institution selection
-@app.callback(
-    Output('selected-institution', 'data'),
-    Input('graph-institution', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-institution', 'data'),
-    State('graph-institution', 'figure'),
-    prevent_initial_call=True
-)
-def update_selected_institution(clickData, n_clicks, stored_institution, figure):
-    ctx_manager = CallbackContextManager(callback_context)
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-
-    return update_selected_value(
-        click_data=clickData,
-        n_clicks=n_clicks,
-        stored_value=stored_institution,
-        triggered_id=ctx_manager.triggered_id,
-        clear_id='clear-selection',
-        chart_id='graph-institution',
-        figure=figure
-    )
-
-def update_map_style(geojson_data, colorscale, selected_feature=None):
-    """
-    Create a Patch object for updating map styles.
-    """
-    patched_geojson = Patch()
+    Factory function that creates selection callbacks for chart interactions.
     
-    if not geojson_data or 'features' not in geojson_data:
-        return patched_geojson
+    Args:
+        graph_id (str): The ID of the graph component
+        store_id (str): The ID of the store component to update
         
-    feature_dguids = [f['properties']['DGUID'] for f in geojson_data['features']]
-    is_selected = [selected_feature and dguid == selected_feature for dguid in feature_dguids]
-    
-    for i, selected in enumerate(is_selected):
-        if selected or geojson_data['features'][i]['properties']['style'].get('weight') != 0.5:
-            style_updates = {
-                'fillColor': 'yellow' if selected else geojson_data['features'][i]['properties']['style']['fillColor'],
-                'color': 'black' if selected else 'gray',
-                'weight': 2 if selected else 0.5,
-            }
-            patched_geojson['features'][i]['properties']['style'].update(style_updates)
-    
-    return patched_geojson
+    Returns:
+        function: A Dash callback function that handles chart selections
+    """
+    @app.callback(
+        Output(store_id, 'data'),
+        Input(graph_id, 'clickData'),
+        Input('clear-selection', 'n_clicks'),
+        State(store_id, 'data'),
+        State(graph_id, 'figure'),
+        prevent_initial_call=True
+    )
+    def update_selection(clickData, n_clicks, stored_value, figure):
+        ctx_manager = CallbackContextManager(callback_context)
+        if not ctx_manager.is_triggered:
+            raise PreventUpdate
+
+        return update_selected_value(
+            click_data=clickData,
+            n_clicks=n_clicks,
+            stored_value=stored_value,
+            triggered_id=ctx_manager.triggered_id,
+            clear_id='clear-selection',
+            chart_id=graph_id,
+            figure=figure
+        )
+    return update_selection
+
+# Create selection callbacks using the factory
+update_selected_isced = create_chart_selection_callback('graph-isced', 'selected-isced')
+update_selected_province = create_chart_selection_callback('graph-province', 'selected-province')
+update_selected_credential = create_chart_selection_callback('graph-credential', 'selected-credential')
+update_selected_cma = create_chart_selection_callback('graph-cma', 'selected-cma')
+update_selected_institution = create_chart_selection_callback('graph-institution', 'selected-institution')
 
 @app.callback(
     Output('cma-geojson', 'data', allow_duplicate=True),
@@ -1675,7 +1547,7 @@ app.clientside_callback(
 def load_user_guide():
     """Load user guide markdown"""
     user_guide_path = Path("user_guide.md")
-    if user_guide_path.exists():
+    if (user_guide_path.exists()):
         with open(user_guide_path, "r", encoding="utf-8") as f:
             content = f.read()
             return dcc.Markdown(content)
