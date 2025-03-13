@@ -1,6 +1,6 @@
 import tempfile
 import os
-from dash import Dash, html, dcc, callback, Output, Input, State, callback_context, dash_table, Patch, no_update
+from dash import Dash, html, dcc, callback, Output, Input, State, callback_context, Patch, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 import geopandas as gpd
