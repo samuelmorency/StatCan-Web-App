@@ -42,6 +42,37 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AzureCache:
+    """
+    A sophisticated dual-layer caching system designed for Azure environments.
+    
+    This class implements a two-tier caching mechanism with an in-memory cache for
+    fast access and a disk-based cache for persistence. The cache is designed to
+    handle memory constraints in Azure App Service environments with automatic
+    pruning, fault-tolerance, and configurable TTL values.
+    
+    Attributes:
+        _CACHE_DIR (str): Directory path for disk-based cache storage.
+        _DEFAULT_SIZE (float): Default size limit for disk cache (1GB).
+        _FALLBACK_SIZE (float): Fallback size limit if primary fails (256MB).
+        _TTL (int): Default time-to-live for cache entries in seconds (3600).
+        _cache (diskcache.Cache): The disk-based cache instance.
+        _memory_cache (dict): In-memory cache dictionary.
+        _last_access (dict): Timestamp tracking for LRU eviction.
+        _MAX_MEMORY_ITEMS (int): Maximum number of items in memory cache (1000).
+    
+    Methods:
+        get_cache(): Returns the disk cache instance.
+        get_cache_value(key): Retrieves a value from the cache system.
+        set_cache_value(key, value, ttl=None): Stores a value in both cache levels.
+        initialize_cache(): Sets up the disk-based cache with fault tolerance.
+        clear_cache(): Clears both memory and disk caches.
+    
+    Notes:
+        - Values are first checked in memory cache before checking disk cache
+        - Memory cache uses an LRU eviction policy based on access timestamps
+        - Disk cache failures trigger automatic fallback to smaller cache size
+        - Cache entries expire after the specified TTL
+    """
     def __init__(self):
         self._CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
         self._DEFAULT_SIZE = 1024e6  # 1GB
@@ -141,13 +172,50 @@ atexit.register(azure_cache.clear_cache)
 
 def azure_cache_decorator(ttl=3600):
     """
-    Decorator for caching function results with configurable TTL.
-
-    Args:
-        ttl (int): Time-to-live in seconds for cached results
-
+    Decorator for caching function results with configurable time-to-live.
+    
+    This decorator adds sophisticated caching to expensive functions, using the
+    AzureCache dual-layer caching system. It generates a consistent hash key based
+    on function name and arguments, checks for cached results, and stores new results
+    when needed.
+    
+    Parameters:
+        ttl (int): Time-to-live in seconds for cached results (default: 3600 = 1 hour)
+    
     Returns:
         function: Decorated function with caching capability
+    
+    Cache Behavior:
+        1. When the decorated function is called:
+           - A unique cache key is generated from function name and arguments
+           - The cache is checked for an existing result with that key
+           - If found, the cached result is returned immediately
+           - If not found, the function executes and its result is cached
+    
+    Key Generation:
+        - Function module and name are included in the key
+        - All positional and keyword arguments are stringified
+        - The combined string is hashed with MD5 for efficient storage
+    
+    Error Handling:
+        If any part of the caching mechanism fails, the function gracefully falls
+        back to executing the original function without caching.
+    
+    Usage Example:
+        @azure_cache_decorator(ttl=300)  # Cache results for 5 minutes
+        def expensive_calculation(param1, param2):
+            # Complex calculation here
+            return result
+    
+    This significantly improves performance for functions that:
+    - Are computationally expensive
+    - Are called multiple times with the same arguments
+    - Return consistent results for the same inputs within the TTL period
+    
+    The TTL parameter should be tuned based on:
+    - How frequently underlying data changes
+    - How computationally expensive the function is
+    - Memory constraints of the hosting environment
     """
     def decorator(func):
         @functools.wraps(func)
@@ -217,11 +285,35 @@ server = app.server
 
 class MapState:
     """
-    Maintains the current state of the map, including viewport bounds, zoom level,
-    selected and hovered features, color scale, timing of last updates, and whether
-    the viewport is locked from updates. This class provides methods to determine
-    if the viewport should be updated based on timing constraints and user actions,
-    as well as methods to update the stored state as user interactions occur.
+    Maintains and manages the state of the interactive map visualization.
+    
+    This class tracks the current state of the map including viewport bounds, zoom level,
+    selections, and timing information. It prevents excessive or unintended viewport
+    updates by implementing timing-based locks and controlled viewport adjustments.
+    
+    Attributes:
+        _bounds (list): Current map bounds as [[min_lat, min_lon], [max_lat, max_lon]].
+        _zoom (int): Current zoom level of the map.
+        _selected_feature (str): DGUID of the currently selected geographic feature.
+        _hover_feature (str): DGUID of the currently hovered geographic feature.
+        _color_scale (dict): Current color scale mapping values to colors.
+        _last_update_time (float): Timestamp of the last viewport update.
+        _viewport_locked (bool): Flag indicating if viewport updates are temporarily locked.
+    
+    Methods:
+        current_bounds: Property returning the current map bounds.
+        current_zoom: Property returning the current zoom level.
+        is_viewport_locked: Property returning the viewport lock status.
+        should_update_viewport(new_bounds, force=False): Determines if viewport should be updated.
+        update_state(bounds=None, zoom=None, selected=None, hover=None, color_scale=None): Updates map state.
+    
+    The viewport locking mechanism works as follows:
+    1. After a viewport update, the viewport is temporarily locked
+    2. Updates are blocked while locked unless forced
+    3. The lock automatically releases after 2 seconds
+    4. Forced updates bypass the lock entirely
+    
+    This prevents rapid successive viewport changes that can disorient users.
     """
     def __init__(self):
         """
@@ -311,23 +403,46 @@ class MapState:
 # Initialize map state
 map_state = MapState()
 
-@azure_cache_decorator(ttl=600)  # 10 minutes - calculated values
+@azure_cache_decorator(ttl=600)
 def calculate_optimal_viewport(bounds, padding_factor=0.1):
     """
-    Computes an optimal viewport given geographic bounds. If the provided bounds
-    are invalid or zero-sized, returns default bounds covering Canada.
-
-    Args:
+    Computes an optimal map viewport given geographic bounds with proper padding.
+    
+    This function takes a set of geographic bounds and calculates appropriate 
+    viewport settings for the map, including padded bounds, center point, and zoom level.
+    It handles edge cases such as invalid or zero-sized bounds and ensures the viewport
+    is correctly sized for the data being displayed.
+    
+    Parameters:
         bounds (tuple): A tuple (min_lat, min_lon, max_lat, max_lon) specifying
                         the geographic area to fit in the viewport.
         padding_factor (float): A factor to apply as padding around the given bounds
-                                to avoid overly tight fitting.
-
+                                to avoid overly tight fitting (default: 0.1 = 10%).
+    
     Returns:
         dict: A dictionary containing:
-              - 'bounds': A 2D list of adjusted bounding coordinates.
+              - 'bounds': A 2D list of adjusted bounding coordinates [[min_lat, min_lon], [max_lat, max_lon]].
               - 'center': A 2-element list representing the center [lat, lon].
               - 'zoom': An integer representing the computed zoom level.
+    
+    Viewport Calculation:
+        1. Validates input bounds for correctness
+        2. Handles small or zero-sized bounds by adding minimum spacing
+        3. Applies padding based on the padding_factor
+        4. Calculates center point from padded bounds
+        5. Computes appropriate zoom level using calculate_zoom_level()
+    
+    Default Bounds:
+        If bounds are invalid or calculation fails, returns default Canadian bounds:
+        - Bounds: [[41, -141], [83, -52]]
+        - Center: [56, -96]
+        - Zoom: 4
+    
+    This function is cached for 10 minutes to avoid recalculating for identical bounds.
+    
+    Usage:
+        When a user selects a feature or changes filters, this function computes
+        the optimal viewport to ensure all relevant data is visible and properly framed.
     """
     try:
         min_lat, min_lon, max_lat, max_lon = bounds
@@ -373,22 +488,45 @@ def calculate_optimal_viewport(bounds, padding_factor=0.1):
             'zoom': 4
         }
 
-@azure_cache_decorator(ttl=600)  # 10 minutes - calculated values
+@azure_cache_decorator(ttl=600)
 def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
     """
-    Determines a suitable zoom level based on the size of a geographic bounding box.
-    The zoom level is higher (more zoomed in) for smaller areas and lower (more zoomed out)
-    for larger areas. The logic considers the maximum dimension of the latitude or
-    longitude span and maps it to a discrete zoom level.
-
-    Args:
+    Determines an appropriate map zoom level based on the geographic area size.
+    
+    This function computes a suitable zoom level based on the size of a bounding box,
+    with smaller areas getting higher zoom levels (more detail) and larger areas
+    getting lower zoom levels (more overview). This ensures that geographic features
+    are displayed at an appropriate scale regardless of their physical size.
+    
+    Parameters:
         min_lat (float): Minimum latitude of the bounding box.
         min_lon (float): Minimum longitude of the bounding box.
         max_lat (float): Maximum latitude of the bounding box.
         max_lon (float): Maximum longitude of the bounding box.
-
+    
     Returns:
-        int: A zoom level. Larger values indicate a closer view.
+        int: A zoom level between 4 and 12, where:
+             - 4 is zoomed out (good for country-level view)
+             - 12 is zoomed in (good for city-level view)
+    
+    Zoom Determination Logic:
+        1. Calculates the larger of latitude and longitude span
+        2. Applies a non-linear scale to map span size to zoom level:
+           - ≤0.1°: zoom 12 (very local view)
+           - ≤0.25°: zoom 11
+           - ≤0.5°: zoom 10
+           - ≤1°: zoom 9
+           - ≤2°: zoom 8
+           - ≤4°: zoom 7
+           - ≤8°: zoom 6
+           - ≤16°: zoom 5
+           - >16°: zoom 4 (continent view)
+    
+    Using both dimensions ensures appropriate zoom regardless of whether the
+    region is tall and narrow or short and wide.
+    
+    This function is cached for 10 minutes to improve performance when calculating
+    zoom levels for the same bounds multiple times.
     """
     lat_diff = max_lat - min_lat
     lon_diff = max_lon - min_lon
@@ -429,8 +567,32 @@ def create_color_scale(max_val, min_val, n_colors=9):
 
 class CallbackContextManager:
     """
-    A helper class to interpret Dash callback contexts. It simplifies the identification
-    of which input triggered the callback and whether the callback was triggered at all.
+    Helper class that simplifies access to Dash callback context information.
+    
+    This class provides a simplified interface to extract and interpret information
+    about which inputs triggered a callback and what values they contain. It abstracts
+    away the complexity of parsing the callback_context object, making callbacks more
+    maintainable and readable.
+    
+    Attributes:
+        _ctx (dash.callback_context): The original Dash callback context.
+        _triggered (dict or None): Information about the input that triggered the callback.
+        _triggered_id (str or None): The ID of the component that triggered the callback.
+    
+    Properties:
+        triggered_id: Returns the ID string of the triggering component.
+        is_triggered: Returns True if the callback was triggered by an input change.
+    
+    Methods:
+        get_input_value(input_id): Gets the value of a specific input that triggered the callback.
+    
+    Usage:
+        ctx_manager = CallbackContextManager(callback_context)
+        if ctx_manager.triggered_id == 'my-button':
+            # Handle button click
+        elif ctx_manager.triggered_id == 'my-dropdown':
+            value = ctx_manager.get_input_value('my-dropdown')
+            # Handle dropdown change
     """
     def __init__(self, context):
         """
@@ -536,8 +698,34 @@ def monitor_performance(func):
         return result
     return wrapper
 
-# Add optimized filtering class
 class FilterOptimizer:
+    """
+    Optimizes filtering operations on DataFrames with cached results and vectorized operations.
+    
+    This class provides efficient filtering of DataFrame data by implementing:
+    1. Hash-based caching of filter results
+    2. Vectorized operations for maximum performance
+    3. Pre-computed indexes for frequent filtering dimensions
+    
+    Attributes:
+        _data (pd.DataFrame): The source DataFrame with multi-level index.
+        _cache (dict): Cache mapping filter hash strings to filtered DataFrames.
+        _index_cache (dict): Cache of column-specific index values for faster filtering.
+        _last_filter_hash (str): Hash of the last filter configuration applied.
+    
+    Methods:
+        _create_filter_hash(filters): Creates a unique hash for filter configurations.
+        _create_index(column): Creates and caches an index for a specific column.
+        filter_data(filters): Performs optimized filtering with caching.
+    
+    When filter_data() is called:
+    1. A hash is generated from the filter configuration
+    2. If the hash exists in cache, the cached result is returned
+    3. Otherwise, a vectorized filtering operation is performed
+    4. The result is cached before returning
+    
+    The cache is limited to 10 most recent filter configurations to prevent memory growth.
+    """
     def __init__(self, data):
         self._data = data
         self._cache = {}
@@ -610,24 +798,54 @@ def filter_data(data, filters):
     
     return data[mask]
 
-@azure_cache_decorator(ttl=300)  # 5 minutes - results depend on user filters
+@azure_cache_decorator(ttl=300)
 @monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
-                   selected_credentials, selected_institutions, selected_cmas):
-    """Optimized data preprocessing with caching and vectorized operations
-
-    Args:
-        selected_stem_bhase (_type_): _description_
-        selected_years (_type_): _description_
-        selected_provs (_type_): _description_
-        selected_isced (_type_): _description_
-        selected_credentials (_type_): _description_
-        selected_institutions (_type_): _description_
-        selected_cmas (_type_): _description_
-
+                  selected_credentials, selected_institutions, selected_cmas):
+    """
+    The central data processing pipeline for filtering and aggregating graduate data.
+    
+    This function serves as the core of the application's data processing system.
+    It applies user-selected filters to the main dataset and performs optimized
+    aggregations for each visualization dimension. Results are cached to minimize
+    repeated processing of identical filter combinations.
+    
+    Parameters:
+        selected_stem_bhase (tuple): Selected STEM/BHASE categories.
+        selected_years (tuple): Selected academic years.
+        selected_provs (tuple): Selected provinces/territories.
+        selected_isced (tuple): Selected education levels.
+        selected_credentials (tuple): Selected credential types.
+        selected_institutions (tuple): Selected institutions.
+        selected_cmas (tuple): Selected Census Metropolitan Areas/Census Agglomerations.
+    
     Returns:
-        _type_: _description_
-    """    """"""
+        tuple: A 6-element tuple containing:
+            - filtered_data (pd.DataFrame): The complete filtered dataset.
+            - cma_grads (pd.DataFrame): Graduates aggregated by CMA/CA and DGUID.
+            - isced_grads (pd.DataFrame): Graduates aggregated by education level.
+            - province_grads (pd.DataFrame): Graduates aggregated by province.
+            - credential_grads (pd.DataFrame): Graduates aggregated by credential type.
+            - institution_grads (pd.DataFrame): Graduates aggregated by institution.
+    
+    Processing Flow:
+        1. User filters are converted to sets and organized in a filter dictionary
+        2. FilterOptimizer.filter_data() applies vectorized filtering operations
+        3. If the filtered data is empty, empty DataFrames are returned
+        4. Otherwise, aggregations are performed for each visualization dimension
+        5. Results are returned for visualization components to consume
+    
+    Performance Features:
+        - Results are cached for 5 minutes using @azure_cache_decorator
+        - Performance is monitored with @monitor_performance
+        - Uses vectorized operations instead of loops or apply functions
+        - Converts query parameters to tuples for efficient hashing
+        - Applies all filters in a single operation for maximum efficiency
+    
+    Empty Result Handling:
+        If the filtering results in an empty DataFrame, the function returns empty
+        DataFrames for all aggregations to ensure consistent return structure.
+    """
     filters = {
         'STEM/BHASE': set(selected_stem_bhase),
         'year': set(selected_years),
@@ -679,22 +897,41 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
 
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
     """
-    Creates a GeoJSON feature dictionary for a single geographic unit (e.g., a CMA/CA).
-    Each feature includes property fields for graduates count, DGUID, and CMA/CA name.
-    The style properties are determined by the number of graduates and whether the
-    feature is currently selected. If the data range is valid, it uses a normalized
-    index into the color scale; otherwise, it falls back to a default color.
-
-    Args:
-        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit.
+    Creates a GeoJSON feature dictionary for a single geographic unit with styling.
+    
+    This function transforms a row from a GeoDataFrame into a properly formatted 
+    GeoJSON feature with styling properties, tooltips, and selection highlighting.
+    It applies color scaling based on graduate counts and handles selection state.
+    
+    Parameters:
+        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit (CMA/CA).
         colorscale (list): A list of color strings for representing graduate counts.
-        max_graduates (int): The maximum graduates count in the dataset to map.
-        min_graduates (int): The minimum graduates count in the dataset to map.
+        max_graduates (int): The maximum graduates count in the dataset for normalization.
+        min_graduates (int): The minimum graduates count in the dataset for normalization.
         selected_feature (str or None): The DGUID of the currently selected feature, if any.
-
+    
     Returns:
-        dict: A dictionary representing a GeoJSON feature with 'properties' and 'style'
-              attributes suitable for rendering on a Leaflet map via Dash Leaflet.
+        dict: A dictionary representing a GeoJSON feature with:
+            - 'graduates': Number of graduates in this geographic unit
+            - 'DGUID': Geographic unit identifier
+            - 'CMA_CA': Name of the Census Metropolitan Area or Census Agglomeration
+            - 'style': Visual styling properties (colors, weights, opacity)
+            - 'tooltip': HTML content for the hover tooltip
+    
+    Style Determination:
+        1. If the feature is selected, uses red fill and black border
+        2. If not selected, color is determined by normalized graduate count:
+           - Higher counts get darker red colors
+           - Zero counts get light gray
+        3. Selected features have thicker borders (2px vs 0.5px)
+    
+    Geometry Processing:
+        Applies geometry simplification (0.01) to reduce complexity and improve
+        rendering performance, particularly important for complex polygons.
+    
+    Tooltip Formatting:
+        Creates an HTML tooltip showing the CMA/CA name and formatted graduate count
+        with consistent Open Sans font styling and thousands separators.
     """
     graduates = float(row['graduates'])  # Convert to float for faster comparisons
     dguid = str(row['DGUID'])
@@ -726,20 +963,51 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates):,}</div>"
     }
 
-@azure_cache_decorator(ttl=300)  # 5 minutes - visualization data
+@azure_cache_decorator(ttl=300)
 def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     """
-    Creates a horizontal bar chart with error handling for invalid values.
-
-    Args:
-        dataframe (pd.DataFrame): Data to plot
-        x_column (str): Column name for x-axis
-        y_column (str): Column name for y values
-        x_label (str): Label for chart title
-        selected_value (str, optional): Currently selected value to highlight
-
+    Creates a standardized horizontal bar chart for visualization dimensions.
+    
+    This function transforms aggregated data into interactive Plotly bar charts
+    with consistent styling, sorting, and highlighting of selected values. Charts
+    are responsive to selections and maintain visual consistency across the dashboard.
+    
+    Parameters:
+        dataframe (pd.DataFrame): Data to plot, typically from preprocess_data() aggregations.
+        x_column (str): Column name for category labels (e.g., 'Province_Territory').
+        y_column (str): Column name for numeric values (typically 'graduates').
+        x_label (str): Label for the chart title (e.g., 'Province/Territory').
+        selected_value (str, optional): Currently selected value to highlight in red.
+    
     Returns:
-        dict: Plotly figure dictionary or empty dict if data invalid
+        dict: A complete Plotly figure object ready for rendering, or an empty dict if
+              the input data is invalid or empty.
+    
+    Chart Behavior:
+        - Sorts data by value in ascending order (smallest to largest)
+        - Formats numeric values with thousands separators
+        - Uses horizontal orientation for easier category label reading
+        - Dynamically adjusts height based on number of items (for Institution and CMA charts)
+        - Highlights the selected value in red if provided
+        - Uses a red color scale when no selection is active
+        - Provides hover tooltips with formatted graduate counts
+        - Sets up consistent styling using brand colors
+    
+    Visual Features:
+        - Text labels showing values outside bars
+        - Formatted numbers with thousands separators
+        - Consistent font family (Open Sans)
+        - Optimized margins and layout settings
+        - Custom hover templates with clean formatting
+        - Simplified modebar with unnecessary controls removed
+    
+    Selection Highlighting:
+        When a selected_value is provided, the corresponding bar is colored red
+        (bc.MAIN_RED) while other bars are colored light grey (bc.LIGHT_GREY).
+        This provides clear visual feedback on the current selection state.
+    
+    Error Handling:
+        If dataframe is None or empty, returns an empty dict to avoid rendering errors.
     """
     if dataframe is None or dataframe.empty:
         return {}
@@ -999,6 +1267,49 @@ def update_selected_feature(click_data, n_clicks, stored_cma):
     prevent_initial_call=True
 )
 def update_selection(clickData, n_clicks, stored_value, figure):
+    """
+    Manages selection state for all chart visualizations using pattern matching.
+    
+    This callback processes clicks on any chart and updates the corresponding selection
+    state. It uses Dash's pattern matching to handle all charts with a single callback,
+    making the selection system maintainable and consistent. The pattern matching is
+    based on the 'item' key which identifies the dimension (e.g., 'isced', 'province').
+    
+    Triggers:
+        - Clicking on any bar in any chart visualization
+        - Clicking the "Clear Selection" button
+    
+    Parameters:
+        clickData (dict or None): Data from chart click event containing the clicked value.
+        n_clicks (int): Number of times "Clear Selection" button has been clicked.
+        stored_value (str or None): Currently stored selected value.
+        figure (dict): The current figure object to determine bar orientation.
+    
+    Returns:
+        str or None: The new selected value, or None to clear selection.
+    
+    Selection Logic:
+        1. If "Clear Selection" button is clicked, returns None for all stores.
+        2. For chart clicks:
+           - Extracts dimension type from pattern-matched component ID
+           - Determines if chart is horizontal or vertical
+           - Gets clicked value based on orientation (x or y coordinate)
+           - If clicked value matches stored value, toggles off (returns None)
+           - Otherwise sets the new clicked value as selection
+    
+    Pattern Matching:
+        Uses {'type': 'store', 'item': MATCH} to match with corresponding store.
+        The 'item' key connects the graph, store, and data dimension (e.g., 'isced').
+    
+    This system creates a toggle behavior where:
+    - First click on an item selects it
+    - Second click on same item deselects it
+    - Click on different item changes selection to that item
+    - "Clear Selection" button deselects everything
+    
+    Once a value is stored in the store component, it triggers the update_visualizations
+    callback which applies cross-filtering based on the selection.
+    """
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
@@ -1053,6 +1364,60 @@ def update_selection(clickData, n_clicks, stored_value, figure):
     State('map', 'viewport')
 )
 def update_visualizations(*args):
+    """
+    The central cross-filtering callback that coordinates all visualizations.
+    
+    This callback is the heart of the application's interactive cross-filtering system.
+    It responds to both filter changes and visualization selections to update all
+    visualizations simultaneously, ensuring they remain synchronized and reflect the
+    current filtered and selected state.
+    
+    Triggers:
+        - Changes to any filter (STEM/BHASE, Year, Province, etc.)
+        - Selection of any element (map feature, chart bar)
+        - Clearing of selection
+        - Reset of filters
+    
+    Processing Flow:
+        1. Identifies which input triggered the callback
+        2. Processes data through preprocess_data() with current filters
+        3. If any selection exists (ISCED, Province, etc.), applies cross-filtering:
+           - Creates a boolean mask for each active selection
+           - Combines masks with logical AND operations
+           - Re-aggregates data based on the combined mask
+        4. Builds map visualization:
+           - Merges filtered data with geographic features
+           - Creates GeoJSON with dynamic styling based on graduate counts
+           - Highlights selected features
+        5. Creates chart visualizations:
+           - Generates horizontal bar charts for each dimension
+           - Applies consistent styling and highlighting
+        6. Updates map viewport if necessary:
+           - Centers on selection if a feature was clicked
+           - Shows all visible features after filter changes
+    
+    Outputs:
+        - GeoJSON data for the map
+        - Figure objects for each chart (ISCED, Province, CMA, Credential, Institution)
+        - Map viewport settings
+    
+    Performance Considerations:
+        - Monitors cache usage during major updates
+        - Only updates viewport when necessary
+        - Uses efficient vectorized operations throughout
+        - Uses a try-except pattern to ensure graceful degradation
+        - Returns cached empty responses for error states
+    
+    Cross-Filtering Mechanism:
+        When a user clicks any visualization element, this callback:
+        1. Receives the selection via store components
+        2. Applies the selection as additional filters
+        3. Updates all visualizations to reflect the filtered view
+        4. Highlights the selected element across all applicable visualizations
+    
+    This creates a unified visual query system where selections in any component
+    affect all other components, enabling powerful exploratory analysis.
+    """
     try:
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
