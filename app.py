@@ -30,6 +30,8 @@ import threading
 from collections import defaultdict
 import plotly.graph_objects as go
 from pathlib import Path
+from dash.dependencies import MATCH, ALL
+import json
 #from dotenv import load_dotenv
 
 #load_dotenv()
@@ -494,6 +496,20 @@ def load_and_process_educational_data():
     data = data.set_index(["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]).sort_index()
 
     return data
+
+def monitor_cache_usage():
+    """
+    Monitor current cache usage and log statistics.
+    Can be called periodically from callbacks to track memory consumption.
+    """
+    if hasattr(azure_cache, '_cache') and azure_cache._cache is not None:
+        try:
+            stats = azure_cache._cache.stats()
+            mem_usage = len(azure_cache._memory_cache)
+            logger.info(f"Cache stats: {stats}")
+            logger.info(f"Memory cache items: {mem_usage}/{azure_cache._MAX_MEMORY_ITEMS}")
+        except Exception as e:
+            logger.warning(f"Failed to monitor cache usage: {e}")
 
 # Load initial data
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
@@ -974,143 +990,52 @@ def update_selected_feature(click_data, n_clicks, stored_cma):
         
     return stored_cma
 
-def create_chart_selection_callback(graph_id, store_id):
-    """
-    Factory function that creates selection callbacks for chart interactions.
-    
-    Args:
-        graph_id (str): The ID of the graph component
-        store_id (str): The ID of the store component to update
-        
-    Returns:
-        function: A Dash callback function that handles chart selections
-    """
-    @app.callback(
-        Output(store_id, 'data'),
-        Input(graph_id, 'clickData'),
-        Input('clear-selection', 'n_clicks'),
-        State(store_id, 'data'),
-        State(graph_id, 'figure'),
-        prevent_initial_call=True
-    )
-    def update_selection(clickData, n_clicks, stored_value, figure):
-        ctx_manager = CallbackContextManager(callback_context)
-        if not ctx_manager.is_triggered:
-            raise PreventUpdate
-
-        return update_selected_value(
-            click_data=clickData,
-            n_clicks=n_clicks,
-            stored_value=stored_value,
-            triggered_id=ctx_manager.triggered_id,
-            clear_id='clear-selection',
-            chart_id=graph_id,
-            figure=figure
-        )
-    return update_selection
-
-# Create selection callbacks using the factory
-update_selected_isced = create_chart_selection_callback('graph-isced', 'selected-isced')
-update_selected_province = create_chart_selection_callback('graph-province', 'selected-province')
-update_selected_credential = create_chart_selection_callback('graph-credential', 'selected-credential')
-update_selected_cma = create_chart_selection_callback('graph-cma', 'selected-cma')
-update_selected_institution = create_chart_selection_callback('graph-institution', 'selected-institution')
-
 @app.callback(
-    Output('cma-geojson', 'data', allow_duplicate=True),
-    Input('cma-geojson', 'hover_feature'),
-    State('cma-geojson', 'data'),
+    Output({'type': 'store', 'item': MATCH}, 'data'),
+    Input({'type': 'graph', 'item': MATCH}, 'clickData'),
+    Input('clear-selection', 'n_clicks'),
+    State({'type': 'store', 'item': MATCH}, 'data'),
+    State({'type': 'graph', 'item': MATCH}, 'figure'),
     prevent_initial_call=True
 )
-def update_hover_style(hover_feature, current_geojson):
-    """
-    Adjusts the styling of GeoJSON features on the map when a user hovers over them.
-    The hovered feature is highlighted to provide visual feedback, and previously
-    hovered features are reverted to their original style.
-    
-    Args:
-        hover_feature (dict or None): The feature currently hovered, containing its 'id'.
-        current_geojson (dict): The current GeoJSON data displayed on the map.
-
-    Returns:
-        dash_table.Patch: A Patch object representing the updated styling instructions.
-    """
-    if not hover_feature or not current_geojson:
-        raise PreventUpdate
-        
-    patched_geojson = Patch()
-    hover_id = hover_feature.get('id')
-    
-    for i, feature in enumerate(current_geojson['features']):
-        feature_id = feature['properties']['DGUID']
-        if feature_id == hover_id:
-            patched_geojson['features'][i]['properties']['style'].update({
-                'weight': 3,
-                'color': bc.DARK_BLUE,
-                'fillOpacity': 0.9
-            })
-        elif feature['properties']['style'].get('weight') == 3:
-            patched_geojson['features'][i]['properties']['style'].update({
-                'weight': 0.5,
-                'fillOpacity': 0.8
-            })
-            
-    return patched_geojson
-
-@app.callback(
-    Output('map', 'viewport', allow_duplicate=True),
-    Input('map', 'viewport'),
-    prevent_initial_call=True
-)
-def handle_map_movement(viewport):
-    """
-    Updates the global map state when the user moves the map (pans or zooms). If the
-    viewport contains updated bounds, these are stored so that future updates can be
-    managed based on the current state. Does not modify the viewport further, only
-    updates state tracking.
-
-    Args:
-        viewport (dict): The current viewport state of the map, including bounds and zoom.
-
-    Returns:
-        no_update: Indicates no modification to outputs.
-    """
+def update_selection(clickData, n_clicks, stored_value, figure):
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
+        
+    triggered_prop_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    if viewport and 'bounds' in viewport:
-        map_state.update_state(bounds=viewport['bounds'])
+    if triggered_prop_id == 'clear-selection':
+        return None
     
-    return no_update
-
-# Add cache monitoring
-def monitor_cache_usage():
-    """Monitor cache size and usage"""
-    if not cache:
-        return
-        
-    try:
-        total_size = sum(os.path.getsize(os.path.join(cache.directory, f))
-                        for f in os.listdir(cache.directory)
-                        if os.path.isfile(os.path.join(cache.directory, f)))
-        
-        usage_mb = total_size / 1e6
-        logger.info(f"Current cache usage: {usage_mb:.2f}MB")
-        
-        if usage_mb > (cache.size_limit / 1e6) * 0.9:  # 90% threshold
-            logger.warning("Cache usage approaching limit")
-            cache.expire()
-    except Exception as e:
-        logger.error(f"Error monitoring cache: {e}")
+    if clickData and 'points' in clickData:
+        try:
+            pattern_dict = json.loads(triggered_prop_id.replace("'", "\""))
+            item_type = pattern_dict.get('item')
+            
+            orientation = 'v'
+            if figure and 'data' in figure and figure['data'][0].get('orientation') == 'h':
+                orientation = 'h'
+            
+            if orientation == 'h':
+                clicked_value = clickData['points'][0]['y']
+            else:
+                clicked_value = clickData['points'][0]['x']
+                
+            return None if stored_value == clicked_value else clicked_value
+        except Exception as e:
+            logger.error(f"Error parsing pattern ID: {e}")
+            return stored_value
+    
+    return stored_value
 
 @app.callback(
     Output('cma-geojson', 'data'),
-    Output('graph-isced', 'figure'),
-    Output('graph-province', 'figure'),
-    Output('graph-cma', 'figure'),
-    Output('graph-credential', 'figure'),
-    Output('graph-institution', 'figure'),
+    Output({'type': 'graph', 'item': 'isced'}, 'figure'),
+    Output({'type': 'graph', 'item': 'province'}, 'figure'),
+    Output({'type': 'graph', 'item': 'cma'}, 'figure'),
+    Output({'type': 'graph', 'item': 'credential'}, 'figure'),
+    Output({'type': 'graph', 'item': 'institution'}, 'figure'),
     Output('map', 'viewport'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
@@ -1118,38 +1043,16 @@ def monitor_cache_usage():
     Input('isced-filter', 'value'),
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
-    Input('cma-filter', 'value'),  # Add CMA filter input
-    Input('selected-isced', 'data'),
-    Input('selected-province', 'data'),
+    Input('cma-filter', 'value'),
+    Input({'type': 'store', 'item': 'isced'}, 'data'),
+    Input({'type': 'store', 'item': 'province'}, 'data'),
     Input('selected-feature', 'data'),
-    Input('selected-credential', 'data'),
-    Input('selected-institution', 'data'),
-    Input('selected-cma', 'data'),
+    Input({'type': 'store', 'item': 'credential'}, 'data'),
+    Input({'type': 'store', 'item': 'institution'}, 'data'),
+    Input({'type': 'store', 'item': 'cma'}, 'data'),
     State('map', 'viewport')
 )
 def update_visualizations(*args):
-    """
-    The primary callback that responds to user input changes from filters, charts,
-    and map selections. It:
-    - Filters and preprocesses the data based on selected criteria.
-    - Applies cross-filtering based on the currently selected ISCED level, province,
-      and CMA/CA feature.
-    - Updates the GeoJSON map layer, ISCED chart, province chart, and the CMA/CA table.
-    - Adjusts the map viewport if needed.
-
-    If no data matches the filters or an error occurs, it returns empty structures.
-
-    Args:
-        *args: A list of inputs including filter values, chart types, selected ISCED,
-               selected province, selected CMA, and the current map viewport.
-
-    Returns:
-        tuple: A tuple of updated components for the map, charts, table, and viewport.
-               - GeoJSON data for the map
-               - Figure for ISCED chart
-               - Figure for province chart
-               - Updated viewport settings
-    """
     try:
         current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
@@ -1161,6 +1064,14 @@ def update_visualizations(*args):
             raise PreventUpdate
             
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        if triggered_id.startswith('{'):
+            try:
+                pattern_dict = json.loads(triggered_id.replace("'", "\""))
+                if pattern_dict.get('type') == 'store':
+                    triggered_id = f"selected-{pattern_dict.get('item')}"
+            except:
+                pass
 
         # Process data with optimized function
         filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = preprocess_data(

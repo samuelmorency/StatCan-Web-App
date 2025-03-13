@@ -401,11 +401,11 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dbc.Button('Reset Filters', id='reset-filters', color="secondary", className="me-1"),
                 #dbc.Button('Clear Selection', **clear_selection_args, outline=True),
                 dbc.Button('Clear Selection', id='clear-selection', color="danger", className="me-1"),
-                dcc.Store(id='selected-isced', data=None),
-                dcc.Store(id='selected-province', data=None),
-                dcc.Store(id='selected-cma', data=None),
-                dcc.Store(id='selected-institution', data=None),
-                dcc.Store(id='selected-credential', data=None),
+                dcc.Store(id={'type': 'store', 'item': 'isced'}, data=None),
+                dcc.Store(id={'type': 'store', 'item': 'province'}, data=None),
+                dcc.Store(id={'type': 'store', 'item': 'cma'}, data=None),
+                dcc.Store(id={'type': 'store', 'item': 'credential'}, data=None),
+                dcc.Store(id={'type': 'store', 'item': 'institution'}, data=None),
             ])
         ], className="mb-4 h-100"),
         id="horizontal-collapse",
@@ -429,7 +429,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader("Number of Graduates by ISCED Level of Education", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
-                dcc.Graph(id='graph-isced', config={'displaylogo': False}),
+                dcc.Graph(id={'type': 'graph', 'item': 'isced'}, config={'displaylogo': False}),
                 color="primary",
                 type="border",
             ),
@@ -440,7 +440,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader("Number of Graduates by Province", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
-                dcc.Graph(id='graph-province', config={'displaylogo': False}),
+                dcc.Graph(id={'type': 'graph', 'item': 'province'}, config={'displaylogo': False}),
                 color="primary",
                 type="border",
             ),
@@ -453,7 +453,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.Spinner(
                 html.Div([
                     html.Div(
-                        dcc.Graph(id='graph-cma', config={'displaylogo': False}), className='scroll'
+                        dcc.Graph(id={'type': 'graph', 'item': 'cma'}, config={'displaylogo': False}), className='scroll'
                     )
                 ]),
                 color="primary",
@@ -466,7 +466,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader("Number of Graduates by Credential Type", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
-                dcc.Graph(id='graph-credential', config={'displaylogo': False}),
+                dcc.Graph(id={'type': 'graph', 'item': 'credential'}, config={'displaylogo': False}),
                 color="primary",
                 type="border",
             ),
@@ -479,7 +479,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             dbc.Spinner(
                 html.Div([
                     html.Div(
-                        dcc.Graph(id='graph-institution', config={'displaylogo': False}), className='scroll'
+                        dcc.Graph(id={'type': 'graph', 'item': 'institution'}, config={'displaylogo': False}), className='scroll'
                     )
                 ]),
                 color="primary",
