@@ -107,6 +107,16 @@ Multiple performance optimization strategies are implemented:
 - **Geospatial Optimizations**: Feature simplification for better map performance (`row.geometry.simplify(0.01)`)
 - **Selective Updates**: Checks for update necessity before costly operations
 
+#### Future Optimization Opportunities
+
+Several opportunities for further optimization have been identified:
+
+- **Callback Decomposition**: Splitting the monolithic `update_visualizations` callback into smaller, specialized callbacks
+- **Partial Property Updates**: Implementing Dash's Patch feature for more efficient UI updates
+- **Caching Enhancements**: Making memory cache limits configurable and implementing more efficient pruning strategies
+- **Two-Tier Update Strategy**: Separating data processing from visual styling for more efficient updates
+- **Client-Side Processing**: Moving appropriate filtering and highlighting operations to client-side JavaScript
+
 ### 7. User Interface Components
 
 The UI architecture (defined in app_layout.py) provides:
@@ -139,3 +149,18 @@ When a user interacts with any visualization:
 This creates a highly interactive system where each visualization component both influences and responds to the overall filtered state of the application.
 
 The architecture demonstrates sophisticated data handling, efficient state management, and coordinated visualizations to deliver a responsive and insightful data exploration experience.
+
+## Documentation
+
+### Key Components Docstrings
+
+The application includes comprehensive in-code documentation. Key components are documented with detailed docstrings that explain:
+
+- **Purpose and Behavior**: What the component does and how it functions
+- **Parameters and Return Values**: Complete description of inputs and outputs
+- **Processing Flow**: Step-by-step explanation of internal operations
+- **Cause and Effect**: What triggers the component and what effects it produces
+- **Performance Considerations**: Optimization techniques and caching behavior
+- **Error Handling**: How edge cases and failures are managed
+
+These docstrings serve as both reference documentation and learning resources for developers working with the codebase. All major classes, callbacks, and helper functions include this detailed documentation.
