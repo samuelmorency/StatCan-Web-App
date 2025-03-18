@@ -1270,22 +1270,17 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
 
 # Add before the callback definitions
 
-def is_highlight_only_update(ctx, current_geojson):
+def is_highlight_only_update(ctx):
     """
     Determines if the callback should only update highlighting without data recalculation.
     
     Parameters:
         ctx (CallbackContext): The current callback context
-        current_geojson (dict): Current GeoJSON data to check if visualization exists
         
     Returns:
         bool: True if this is a highlight-only update, False otherwise
     """
     if not ctx.triggered:
-        return False
-    
-    # If no visualization data exists yet, always do a full update
-    if not current_geojson or not isinstance(current_geojson, dict) or 'features' not in current_geojson:
         return False
         
     # Get the ID of the component that triggered the callback
@@ -1649,16 +1644,16 @@ def update_visualizations(*args):
     """
     try:
         # Extract arguments: first group are inputs, second group are states
-        input_len = 13
+        input_len = 20  # 13 filters + 7 selections
         inputs = args[:input_len]
         states = args[input_len:]
         
-        current_viewport = states[0]  # Viewport is the last input
-        current_geojson, current_isced, current_province, current_cma, current_credential, current_institution = states[1:]
+        current_viewport = inputs[-1]  # Viewport is the last input
+        current_geojson, current_isced, current_province, current_cma, current_credential, current_institution = states
         
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
          selected_isced, selected_province, selected_feature, 
-         selected_credential, selected_institution, selected_cma) = inputs
+         selected_credential, selected_institution, selected_cma) = args[:-1]
         
         ctx = callback_context
         if not ctx.triggered:
@@ -1676,7 +1671,7 @@ def update_visualizations(*args):
                 logger.warning(f"Error parsing pattern ID: {e}")
         
         # OPTIMIZATION: Check if we should use Patch for highlight-only or viewport-only updates
-        if OPTIMIZATION_CONFIG['use_patch'] and is_highlight_only_update(ctx, current_geojson):
+        if OPTIMIZATION_CONFIG['use_patch'] and is_highlight_only_update(ctx):
             logger.debug(f"Using Patch for highlight-only update. Trigger: {triggered_id}")
         
         # Create Patch objects for each visualization
@@ -1692,24 +1687,15 @@ def update_visualizations(*args):
                 triggered_id, selected_feature, current_viewport, current_geojson
             ) if OPTIMIZATION_CONFIG['viewport_only'] else dash.no_update
             
-            if (patched_geojson is dash.no_update and 
-                patched_isced is dash.no_update and 
-                patched_province is dash.no_update and 
-                patched_cma is dash.no_update and 
-                patched_credential is dash.no_update and 
-                patched_institution is dash.no_update):
-                logger.info("All patches are no_update, forcing full data update")
-                # Continue with the full data update instead of returning patches
-            else:
-                return (
-                    patched_geojson,
-                    patched_isced,
-                    patched_province,
-                    patched_cma,
-                    patched_credential,
-                    patched_institution,
-                    viewport_update
-                )
+            return (
+                patched_geojson,
+                patched_isced,
+                patched_province,
+                patched_cma,
+                patched_credential,
+                patched_institution,
+                viewport_update
+            )
         
         # If not a highlight-only update, proceed with the full data processing
         logger.debug(f"Performing full update. Trigger: {triggered_id}")
