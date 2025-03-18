@@ -1699,37 +1699,15 @@ def update_visualizations(*args):
             patched_credential = update_chart_highlighting(current_credential, 'credential', selected_credential)
             patched_institution = update_chart_highlighting(current_institution, 'institution', selected_institution)
         
-            # Update viewport if needed
-            viewport_update = update_viewport_for_selection(
-                triggered_id, selected_feature, current_viewport, current_geojson
-            ) if OPTIMIZATION_CONFIG['viewport_only'] else dash.no_update
-            
-            return (
-                patched_geojson,
-                patched_isced,
-                patched_province,
-                patched_cma,
-                patched_credential,
-                patched_institution,
-                viewport_update
-            )
-        
-        # If not a highlight-only update, proceed with the full data processing
-        logger.debug(f"Performing full update. Trigger: {triggered_id}")
-        
-        # Convert to tuples for hashing in cache
-        stem_bhase_tuple = tuple(stem_bhase) if stem_bhase else ()
-        years_tuple = tuple(years) if years else ()
-        provs_tuple = tuple(provs) if provs else ()
-        isced_tuple = tuple(isced) if isced else ()
-        credentials_tuple = tuple(credentials) if credentials else ()
-        institutions_tuple = tuple(institutions) if institutions else ()
-        cma_filter_tuple = tuple(cma_filter) if cma_filter else ()
-        
-        # Process data with full function
+        # Process data with optimized function
         filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = preprocess_data(
-            stem_bhase_tuple, years_tuple, provs_tuple, isced_tuple, 
-            credentials_tuple, institutions_tuple, cma_filter_tuple
+            tuple(stem_bhase or []),
+            tuple(years or []),
+            tuple(provs or []),
+            tuple(isced or []),
+            tuple(credentials or []),
+            tuple(institutions or []),
+            tuple(cma_filter or [])  # Add CMA filter to preprocess_data
         )
         
         # Apply cross-filtering with vectorized operations
@@ -1879,7 +1857,6 @@ def update_visualizations(*args):
         
     except Exception as e:
         logger.error(f"Error in update_visualizations: {str(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
         return create_empty_response()
 
 @app.callback(
