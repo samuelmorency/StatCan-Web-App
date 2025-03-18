@@ -1220,6 +1220,8 @@ def measure_callback_performance(name):
         return wrapper
     return decorator
 
+# Add with other utility functions
+
 def measure_callback_performance(name):
     """
     Decorator to measure and log the performance of callbacks.
@@ -1284,177 +1286,6 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
             return calculate_optimal_viewport(tuple(bounds))
     
     return None
-
-# Add before the callback definitions
-
-def is_highlight_only_update(ctx):
-    """
-    Determines if the callback should only update highlighting without data recalculation.
-    
-    Parameters:
-        ctx (CallbackContext): The current callback context
-        
-    Returns:
-        bool: True if this is a highlight-only update, False otherwise
-    """
-    if not ctx.triggered:
-        return False
-        
-    # Get the ID of the component that triggered the callback
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    # Check for pattern-matched store IDs
-    if triggered_id.startswith('{'):
-        try:
-            pattern_dict = json.loads(triggered_id.replace("'", "\""))
-            if pattern_dict.get('type') == 'store':
-                return True
-        except:
-            pass
-            
-    # Check for other highlighting-specific triggers
-    highlight_only_triggers = [
-        'selected-feature',
-        'clear-selection'
-    ]
-    
-    return triggered_id in highlight_only_triggers
-
-def update_geojson_highlighting(geojson_data, selected_feature):
-    """
-    Creates a Patch object to update only the highlighting of GeoJSON features.
-    
-    Parameters:
-        geojson_data (dict): The current GeoJSON data structure
-        selected_feature (str): DGUID of the selected feature, if any
-        
-    Returns:
-        Patch: A Patch object updating only the style properties of features
-    """
-    if not geojson_data or 'features' not in geojson_data:
-        return dash.no_update
-        
-    patched_geojson = Patch()
-    
-    for i, feature in enumerate(geojson_data['features']):
-        if 'properties' not in feature:
-            continue
-            
-        is_selected = selected_feature and feature['properties'].get('DGUID') == selected_feature
-        current_style = feature['properties'].get('style', {})
-        current_color = current_style.get('fillColor', bc.LIGHT_GREY)
-        
-        # Only update style if this feature isn't already correctly styled
-        current_is_selected = (current_style.get('color') == bc.IIC_BLACK and 
-                               current_style.get('weight') == 2)
-        
-        if current_is_selected != is_selected:
-            patched_geojson['features'][i]['properties']['style'] = {
-                'fillColor': bc.MAIN_RED if is_selected else current_color,
-                'color': bc.IIC_BLACK if is_selected else bc.GREY,
-                'weight': 2 if is_selected else 0.5,
-                'fillOpacity': 0.8
-            }
-            
-    return patched_geojson
-
-def update_chart_highlighting(figure, dimension_name, selected_value):
-    """
-    Creates a Patch object to update only the bar colors of a chart.
-    
-    Parameters:
-        figure (dict): The current figure object
-        dimension_name (str): The dimension this chart represents (e.g., 'isced')
-        selected_value (str): The selected value to highlight, if any
-        
-    Returns:
-        Patch: A Patch object updating only the marker colors
-    """
-    if not figure or 'data' not in figure or not figure['data']:
-        return dash.no_update
-        
-    patched_figure = Patch()
-    
-    # Determine orientation (horizontal or vertical bars)
-    is_horizontal = figure['data'][0].get('orientation') == 'h'
-    
-    if is_horizontal:
-        # Update colors for horizontal bar chart
-        for i, y_value in enumerate(figure['data'][0]['y']):
-            is_selected = selected_value and str(y_value) == str(selected_value)
-            patched_figure['data'][0]['marker']['color'][i] = bc.MAIN_RED if is_selected else bc.LIGHT_GREY
-    else:
-        # Update colors for vertical bar chart
-        for i, x_value in enumerate(figure['data'][0]['x']):
-            is_selected = selected_value and str(x_value) == str(selected_value)
-            patched_figure['data'][0]['marker']['color'][i] = bc.MAIN_RED if is_selected else bc.LIGHT_GREY
-                
-    return patched_figure
-
-def update_viewport_for_selection(triggered_id, selected_feature, current_viewport, geojson_data):
-    """
-    Creates a Patch object to update only the map viewport when a feature is selected.
-    
-    Parameters:
-        triggered_id (str): ID of the component that triggered the callback
-        selected_feature (str): DGUID of the selected feature, if any
-        current_viewport (dict): Current viewport settings
-        geojson_data (dict): Current GeoJSON data
-        
-    Returns:
-        Patch or no_update: A Patch object for the viewport or no_update
-    """
-    if triggered_id != 'selected-feature' or not selected_feature:
-        return dash.no_update
-        
-    # Find the selected feature in the GeoJSON data
-    selected_feature_data = None
-    if geojson_data and 'features' in geojson_data:
-        for feature in geojson_data['features']:
-            if feature['properties'].get('DGUID') == selected_feature:
-                selected_feature_data = feature
-                break
-                
-    if not selected_feature_data:
-        return dash.no_update
-        
-    # Extract coordinates from the feature geometry
-    coords = []
-    try:
-        if selected_feature_data['geometry']['type'] == 'Polygon':
-            coords = selected_feature_data['geometry']['coordinates'][0]
-        elif selected_feature_data['geometry']['type'] == 'MultiPolygon':
-            # Flatten multi-polygon coordinates
-            for polygon in selected_feature_data['geometry']['coordinates']:
-                coords.extend(polygon[0])
-    except (KeyError, IndexError):
-        return dash.no_update
-        
-    if not coords:
-        return dash.no_update
-        
-    # Calculate bounds
-    lats = [coord[1] for coord in coords]
-    lons = [coord[0] for coord in coords]
-    
-    min_lat, max_lat = min(lats), max(lats)
-    min_lon, max_lon = min(lons), max(lons)
-    
-    # Add padding
-    lat_padding = (max_lat - min_lat) * 0.1
-    lon_padding = (max_lon - min_lon) * 0.1
-    
-    bounds = [
-        [min_lat - lat_padding, min_lon - lon_padding],
-        [max_lat + lat_padding, max_lon + lon_padding]
-    ]
-    
-    # Create Patch for viewport
-    patched_viewport = Patch()
-    patched_viewport['bounds'] = bounds
-    patched_viewport['transition'] = dict(duration=1000)
-    
-    return patched_viewport
 
 # Optimized callback for map selection
 @app.callback(
@@ -1595,15 +1426,8 @@ def update_selection(clickData, n_clicks, stored_value, figure):
     Input({'type': 'store', 'item': 'credential'}, 'data'),
     Input({'type': 'store', 'item': 'institution'}, 'data'),
     Input({'type': 'store', 'item': 'cma'}, 'data'),
-    State('map', 'viewport'),
-    State('cma-geojson', 'data'),
-    State({'type': 'graph', 'item': 'isced'}, 'figure'),
-    State({'type': 'graph', 'item': 'province'}, 'figure'),
-    State({'type': 'graph', 'item': 'cma'}, 'figure'),
-    State({'type': 'graph', 'item': 'credential'}, 'figure'),
-    State({'type': 'graph', 'item': 'institution'}, 'figure')
+    State('map', 'viewport')
 )
-@measure_callback_performance("update_visualizations")
 def update_visualizations(*args):
     """
     The central cross-filtering callback that coordinates all visualizations.
@@ -1660,14 +1484,7 @@ def update_visualizations(*args):
     affect all other components, enabling powerful exploratory analysis.
     """
     try:
-        # Extract arguments: first group are inputs, second group are states
-        input_len = 20  # 13 filters + 7 selections
-        inputs = args[:input_len]
-        states = args[input_len:]
-        
-        current_viewport = inputs[-1]  # Viewport is the last input
-        current_geojson, current_isced, current_province, current_cma, current_credential, current_institution = states
-        
+        current_viewport = args[-1]
         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
          selected_isced, selected_province, selected_feature, 
          selected_credential, selected_institution, selected_cma) = args[:-1]
@@ -1678,27 +1495,14 @@ def update_visualizations(*args):
             
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
-        # Process pattern-matched IDs
         if triggered_id.startswith('{'):
             try:
                 pattern_dict = json.loads(triggered_id.replace("'", "\""))
                 if pattern_dict.get('type') == 'store':
                     triggered_id = f"selected-{pattern_dict.get('item')}"
-            except Exception as e:
-                logger.warning(f"Error parsing pattern ID: {e}")
-        
-        # OPTIMIZATION: Check if we should use Patch for highlight-only or viewport-only updates
-        if OPTIMIZATION_CONFIG['use_patch'] and is_highlight_only_update(ctx):
-            logger.debug(f"Using Patch for highlight-only update. Trigger: {triggered_id}")
-        
-        # Create Patch objects for each visualization
-            patched_geojson = update_geojson_highlighting(current_geojson, selected_feature)
-            patched_isced = update_chart_highlighting(current_isced, 'isced', selected_isced)
-            patched_province = update_chart_highlighting(current_province, 'province', selected_province)
-            patched_cma = update_chart_highlighting(current_cma, 'cma', selected_cma)
-            patched_credential = update_chart_highlighting(current_credential, 'credential', selected_credential)
-            patched_institution = update_chart_highlighting(current_institution, 'institution', selected_institution)
-        
+            except:
+                pass
+
         # Process data with optimized function
         filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = preprocess_data(
             tuple(stem_bhase or []),
