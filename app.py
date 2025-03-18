@@ -1,6 +1,5 @@
 import tempfile
 import os
-import traceback
 from dash import Dash, html, dcc, callback, Output, Input, State, callback_context, Patch, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
