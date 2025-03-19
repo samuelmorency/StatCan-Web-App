@@ -34,6 +34,9 @@ from dash.dependencies import MATCH, ALL
 import json
 #from dotenv import load_dotenv
 
+NEW_DATA = False
+NEW_SF = False
+
 #load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
 
@@ -631,8 +634,14 @@ def load_spatial_data():
                - A GeoDataFrame of provinces with cleaned longitude/latitude.
                - A GeoDataFrame of combined CMA/CA regions with cleaned coordinates.
     """
+    
+    if NEW_SF:
+        combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
+    else:
+        combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean - Backup.parquet")
+        
     province_longlat_clean = gpd.read_parquet("data/province_longlat_clean.parquet")
-    combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
+    
     return province_longlat_clean, combined_longlat_clean
 
 @azure_cache_decorator(ttl=3600)  # 1 hour cache
@@ -646,16 +655,27 @@ def load_and_process_educational_data():
         pandas.DataFrame: A DataFrame containing cleaned and processed educational data,
                           ready for filtering and aggregation.
     """
-    data = pd.read_pickle("data/cleaned_data.pkl")
+    if NEW_DATA:
+        data = pd.read_pickle("data/cleaned_data.pkl")
+    else:
+        data = pd.read_pickle("data/cleaned_data - Backup.pkl")
+        data = data.rename(columns={'ISCED_level_of_education': 'ISCED Level of Education',
+                           'Credential_Type': 'Credential Type',
+                           'CIP_Name': 'CIP Name',
+                           'Province_Territory': 'Province or Territory',
+                           'year': 'Academic Year',
+                           'value': 'Value',
+                           'CMA_CA': 'CMA/CSD'})
+        
     #data.to_excel('data.xlsx')
     
-    categorical_cols = ["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]
+    categorical_cols = ["STEM/BHASE", "Academic Year", "Province or Territory", "ISCED Level of Education", "Credential Type", "Institution", "CMA/CSD", "DGUID"]
     for col in categorical_cols:
         data[col] = data[col].astype('category')
-    data['value'] = data['value'].astype('float32')
+    data['Value'] = data['Value'].astype('float32')
 
     # Set a multi-index for direct indexing
-    data = data.set_index(["STEM/BHASE", "year", "Province_Territory", "ISCED_level_of_education", "Credential_Type", "Institution", "CMA_CA", "DGUID"]).sort_index()
+    data = data.set_index(["STEM/BHASE", "Academic Year", "Province or Territory", "ISCED Level of Education", "Credential Type", "Institution", "CMA/CSD", "DGUID"]).sort_index()
 
     return data
 
@@ -848,12 +868,12 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     """
     filters = {
         'STEM/BHASE': set(selected_stem_bhase),
-        'year': set(selected_years),
-        'Province_Territory': set(selected_provs),
-        'ISCED_level_of_education': set(selected_isced),
-        'Credential_Type': set(selected_credentials),
+        'Academic Year': set(selected_years),
+        'Province or Territory': set(selected_provs),
+        'ISCED Level of Education': set(selected_isced),
+        'Credential Type': set(selected_credentials),
         'Institution': set(selected_institutions),
-        'CMA_CA': set(selected_cmas),
+        'CMA/CSD': set(selected_cmas),
         'DGUID': set()
     }
 
@@ -864,11 +884,11 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
 
     # Use vectorized operations instead of parallel processing
     aggregations = {
-        'cma': filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum(),
-        'isced': filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum(),
-        'province': filtered_data.groupby("Province_Territory", observed=True)['value'].sum(),
-        'credential': filtered_data.groupby("Credential_Type", observed=True)['value'].sum(),
-        'institution': filtered_data.groupby("Institution", observed=True)['value'].sum()
+        'cma': filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum(),
+        'isced': filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum(),
+        'province': filtered_data.groupby("Province or Territory", observed=True)['Value'].sum(),
+        'credential': filtered_data.groupby("Credential Type", observed=True)['Value'].sum(),
+        'institution': filtered_data.groupby("Institution", observed=True)['Value'].sum()
     }
     
     # Pre-allocate DataFrames for better memory efficiency
@@ -914,7 +934,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         dict: A dictionary representing a GeoJSON feature with:
             - 'graduates': Number of graduates in this geographic unit
             - 'DGUID': Geographic unit identifier
-            - 'CMA_CA': Name of the Census Metropolitan Area or Census Agglomeration
+            - 'CMA/CSD': Name of the Census Metropolitan Area or Census Agglomeration
             - 'style': Visual styling properties (colors, weights, opacity)
             - 'tooltip': HTML content for the hover tooltip
     
@@ -953,14 +973,14 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     return {
         'graduates': int(graduates),
         'DGUID': dguid,
-        'CMA_CA': row['CMA_CA'],
+        'CMA/CSD': row['CMA/CSD'],
         'style': {
             'fillColor': bc.MAIN_RED if is_selected else color,
             'color': bc.IIC_BLACK if is_selected else bc.GREY,
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
-        'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA_CA']}<br>Graduates: {int(graduates):,}</div>"
+        'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA/CSD']}<br>Graduates: {int(graduates):,}</div>"
     }
 
 @azure_cache_decorator(ttl=300)
@@ -974,7 +994,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     
     Parameters:
         dataframe (pd.DataFrame): Data to plot, typically from preprocess_data() aggregations.
-        x_column (str): Column name for category labels (e.g., 'Province_Territory').
+        x_column (str): Column name for category labels (e.g., 'Province or Territory').
         y_column (str): Column name for numeric values (typically 'graduates').
         x_label (str): Label for the chart title (e.g., 'Province/Territory').
         selected_value (str, optional): Currently selected value to highlight in red.
@@ -1017,7 +1037,7 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     
     chart_height=500
     
-    #If x_label = 'Institution' or 'CMA_CA', then chart_height=1000
+    #If x_label = 'Institution' or 'CMA/CSD', then chart_height=1000
     if x_label == 'Institution' or x_label == 'Census Metropolitan Area':
         num_bars =len(sorted_data.index)
         max_height=max(chart_height, 25 * len(sorted_data.index))
@@ -1154,11 +1174,11 @@ def update_selected_value(click_data, n_clicks, stored_value, triggered_id, clea
 
 # Generate initial filter options
 stem_bhase_options_full = [{'label': stem, 'value': stem} for stem in sorted(data.index.get_level_values('STEM/BHASE').unique())]
-year_options_full = [{'label': year, 'value': year} for year in sorted(data.index.get_level_values('year').unique())]
-prov_options_full = [{'label': prov, 'value': prov} for prov in sorted(data.index.get_level_values('Province_Territory').unique())]
-cma_options_full = [{'label': cma, 'value': cma} for cma in sorted(data.index.get_level_values('CMA_CA').unique())]
-isced_options_full = [{'label': level, 'value': level} for level in sorted(data.index.get_level_values('ISCED_level_of_education').unique())]
-credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential_Type').unique())]
+year_options_full = [{'label': year, 'value': year} for year in sorted(data.index.get_level_values('Academic Year').unique())]
+prov_options_full = [{'label': prov, 'value': prov} for prov in sorted(data.index.get_level_values('Province or Territory').unique())]
+cma_options_full = [{'label': cma, 'value': cma} for cma in sorted(data.index.get_level_values('CMA/CSD').unique())]
+isced_options_full = [{'label': level, 'value': level} for level in sorted(data.index.get_level_values('ISCED Level of Education').unique())]
+credential_options_full = [{'label': cred, 'value': cred} for cred in sorted(data.index.get_level_values('Credential Type').unique())]
 institution_options_full = [{'label': inst, 'value': inst} for inst in sorted(data.index.get_level_values('Institution').unique())]
 
 # Extract and write values only from option dictionaries
@@ -1453,30 +1473,30 @@ def update_visualizations(*args):
         if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution, selected_cma]):
             mask = pd.Series(True, index=filtered_data.index)
             if selected_isced:
-                mask &= filtered_data['ISCED_level_of_education'] == selected_isced
+                mask &= filtered_data['ISCED Level of Education'] == selected_isced
             if selected_province:
-                mask &= filtered_data['Province_Territory'] == selected_province
+                mask &= filtered_data['Province or Territory'] == selected_province
             if selected_feature:
                 mask &= filtered_data['DGUID'] == selected_feature
             if selected_credential:
-                mask &= filtered_data['Credential_Type'] == selected_credential
+                mask &= filtered_data['Credential Type'] == selected_credential
             if selected_institution:
                 mask &= filtered_data['Institution'] == selected_institution
             if selected_cma:
-                mask &= filtered_data['CMA_CA'] == selected_cma
+                mask &= filtered_data['CMA/CSD'] == selected_cma
 
             filtered_data = filtered_data[mask]
             if filtered_data.empty:
                 return create_empty_response()
 
             # Aggregations with observed=True
-            cma_grads = filtered_data.groupby(["CMA_CA", "DGUID"], observed=True)['value'].sum().reset_index(name='graduates')
-            isced_grads = filtered_data.groupby("ISCED_level_of_education", observed=True)['value'].sum().reset_index(name='graduates')
-            province_grads = filtered_data.groupby("Province_Territory", observed=True)['value'].sum().reset_index(name='graduates')
+            cma_grads = filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+            isced_grads = filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
+            province_grads = filtered_data.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
             # Add aggregations for new charts
-            #cma_aggregation = filtered_data.groupby("CMA_CA", observed=True)['value'].sum().reset_index(name='graduates')
-            credential_grads = filtered_data.groupby("Credential_Type", observed=True)['value'].sum().reset_index(name='graduates')
-            institution_grads = filtered_data.groupby("Institution", observed=True)['value'].sum().reset_index(name='graduates')
+            #cma_aggregation = filtered_data.groupby("CMA/CSD", observed=True)['Value'].sum().reset_index(name='graduates')
+            credential_grads = filtered_data.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
+            institution_grads = filtered_data.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
 
         # Prepare map data efficiently
         cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='left')
@@ -1524,14 +1544,14 @@ def update_visualizations(*args):
                 'properties': {
                     'graduates': int(row['graduates']),
                     'DGUID': str(row['DGUID']),
-                    'CMA_CA': row['CMA_CA'],
+                    'CMA/CSD': row['CMA/CSD'],
                     'style': {
                         'fillColor': color if row['graduates'] > 0 else 'lightgray',
                         'color': bc.IIC_BLACK if row['DGUID'] == selected_feature else bc.GREY,
                         'weight': 2 if row['DGUID'] == selected_feature else 0.5,
                         'fillOpacity': 0.8
                     },
-                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA_CA']}<br>Graduates: {int(row['graduates']):,}</div>"
+                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA/CSD']}<br>Graduates: {int(row['graduates']):,}</div>"
                 }
             }
             for (_, row), color in zip(cma_data.iterrows(), colors)
@@ -1542,7 +1562,7 @@ def update_visualizations(*args):
         # Create charts with selections (simplified without chart type parameter)
         fig_isced = create_chart(
             isced_grads, 
-            'ISCED_level_of_education', 
+            'ISCED Level of Education', 
             'graduates',
             'ISCED Level of Education', 
             selected_isced
@@ -1550,7 +1570,7 @@ def update_visualizations(*args):
         
         fig_province = create_chart(
             province_grads, 
-            'Province_Territory', 
+            'Province or Territory', 
             'graduates',
             'Province/Territory', 
             selected_province
@@ -1559,7 +1579,7 @@ def update_visualizations(*args):
         # Create new charts
         fig_cma = create_chart(
             cma_grads,
-            'CMA_CA',
+            'CMA/CSD',
             'graduates',
             'Census Metropolitan Area',
             selected_feature
@@ -1567,7 +1587,7 @@ def update_visualizations(*args):
 
         fig_credential = create_chart(
             credential_grads,
-            'Credential_Type',
+            'Credential Type',
             'graduates',
             'Credential Type',
             selected_credential
@@ -1676,21 +1696,21 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     # Create dictionary of current filter selections
     current_filters = {
         'STEM/BHASE': stem_bhase or [],
-        'year': years or [],
-        'Province_Territory': provs or [],
-        'CMA_CA': cmas or [],
-        'ISCED_level_of_education': isced or [],
-        'Credential_Type': credentials or [],
+        'Academic Year': years or [],
+        'Province or Territory': provs or [],
+        'CMA/CSD': cmas or [],
+        'ISCED Level of Education': isced or [],
+        'Credential Type': credentials or [],
         'Institution': institutions or []
     }
     
     # Get updated options for each filter
     stem_options = filter_options(data, 'STEM/BHASE', {k:v for k,v in current_filters.items() if k != 'STEM/BHASE'})
-    year_options = filter_options(data, 'year', {k:v for k,v in current_filters.items() if k != 'year'})
-    prov_options = filter_options(data, 'Province_Territory', {k:v for k,v in current_filters.items() if k != 'Province_Territory'})
-    cma_options = filter_options(data, 'CMA_CA', {k:v for k,v in current_filters.items() if k != 'CMA_CA'})
-    isced_options = filter_options(data, 'ISCED_level_of_education', {k:v for k,v in current_filters.items() if k != 'ISCED_level_of_education'})
-    cred_options = filter_options(data, 'Credential_Type', {k:v for k,v in current_filters.items() if k != 'Credential_Type'})
+    year_options = filter_options(data, 'Academic Year', {k:v for k,v in current_filters.items() if k != 'Academic Year'})
+    prov_options = filter_options(data, 'Province or Territory', {k:v for k,v in current_filters.items() if k != 'Province or Territory'})
+    cma_options = filter_options(data, 'CMA/CSD', {k:v for k,v in current_filters.items() if k != 'CMA/CSD'})
+    isced_options = filter_options(data, 'ISCED Level of Education', {k:v for k,v in current_filters.items() if k != 'ISCED Level of Education'})
+    cred_options = filter_options(data, 'Credential Type', {k:v for k,v in current_filters.items() if k != 'Credential Type'})
     inst_options = filter_options(data, 'Institution', {k:v for k,v in current_filters.items() if k != 'Institution'})
     
     return (

@@ -342,7 +342,7 @@ def initialize_pivot_table(data):
         data=data.reset_index().to_dict('records'),
         cols=['year'],
         rows=['Province_Territory', 'CMA_CA'],
-        vals=['value'],
+        vals=['Value'],
         aggregatorName='Integer Sum',
         rendererName='Table',
         colOrder='key_a_to_z',
