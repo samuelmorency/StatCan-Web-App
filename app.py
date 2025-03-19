@@ -34,8 +34,9 @@ from dash.dependencies import MATCH, ALL
 import json
 #from dotenv import load_dotenv
 
-NEW_DATA = False
-NEW_SF = False
+NEW_DATA = True
+NEW_SF = True
+SIMPLIFIED_SF = True
 
 #load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
@@ -636,7 +637,10 @@ def load_spatial_data():
     """
     
     if NEW_SF:
-        combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
+        if SIMPLIFIED_SF:
+            combined_longlat_clean = gpd.read_parquet("data/combined_longlat_simplified.parquet")
+        else:
+            combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
     else:
         combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean - Backup.parquet")
         
