@@ -1552,7 +1552,7 @@ def update_visualizations(*args):
                     'style': {
                         'fillColor': color if row['graduates'] > 0 else 'lightgray',
                         'color': bc.IIC_BLACK if row['DGUID'] == selected_feature else bc.GREY,
-                        'weight': 2 if row['DGUID'] == selected_feature else 0.5,
+                        'weight': 2 if row['DGUID'] == selected_feature else 0.75,
                         'fillOpacity': 0.8
                     },
                     'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA/CSD']}<br>Graduates: {int(row['graduates']):,}</div>"
