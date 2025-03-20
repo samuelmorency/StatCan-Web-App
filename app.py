@@ -1540,9 +1540,9 @@ def update_visualizations(*args):
         
         if max_graduates > min_graduates:
             normalized_values = (cma_data['graduates'] - min_graduates) / (max_graduates - min_graduates)
-            colors = px.colors.sample_colorscale(px.colors.sequential.Reds, normalized_values)
+            colors = px.colors.sample_colorscale(COLOUR_SCALE, normalized_values)
         else:
-            colors = [px.colors.sequential.Reds[-1]] * len(cma_data)
+            colors = [COLOUR_SCALE[-1]] * len(cma_data)
         
         features = [
             {
