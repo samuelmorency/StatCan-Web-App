@@ -32,11 +32,14 @@ import plotly.graph_objects as go
 from pathlib import Path
 from dash.dependencies import MATCH, ALL
 import json
+import brand_colours as bc
 #from dotenv import load_dotenv
 
 NEW_DATA = True
 NEW_SF = True
 SIMPLIFIED_SF = True
+
+COLOUR_SCALE = bc.BRIGHT_RED_SCALE
 
 #load_dotenv()
 #mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
@@ -1069,8 +1072,8 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
                 bordercolor=bc.IIC_BLACK
             ),
             marker=dict(
-                color=[bc.LIGHT_GREY if x != selected_value else bc.MAIN_RED for x in sorted_data[x_column]] if selected_value else sorted_data[y_column],
-                colorscale='Reds' if not selected_value else None
+                color=sorted_data[y_column] if not selected_value else [bc.MAIN_RED if x == selected_value else bc.LIGHT_GREY for x in sorted_data[x_column]],
+                colorscale=COLOUR_SCALE if not selected_value else None
             )
         )#, layout={'height': 5000}
     )
