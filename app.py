@@ -32,8 +32,6 @@ import plotly.graph_objects as go
 from pathlib import Path
 from dash.dependencies import MATCH, ALL
 import json
-import brand_colours as bc
-#from dotenv import load_dotenv
 
 NEW_DATA = True
 NEW_SF = True
@@ -41,10 +39,6 @@ SIMPLIFIED_SF = True
 
 COLOUR_SCALE = bc.BRIGHT_RED_SCALE
 
-#load_dotenv()
-#mapbox_api_token = os.getenv("MAPBOX_ACCESS_TOKEN")
-
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
