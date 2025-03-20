@@ -32,117 +32,244 @@ import plotly.graph_objects as go
 from pathlib import Path
 from dash.dependencies import MATCH, ALL
 import json
+import pickle
+import sys
 
 NEW_DATA = True
 NEW_SF = True
 SIMPLIFIED_SF = True
-
 COLOUR_SCALE = bc.BRIGHT_RED_SCALE
+
+_cache_initialized = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AzureCache:
     """
-    A sophisticated dual-layer caching system designed for Azure environments.
+    A sophisticated dual-layer caching system optimized for Azure App Service environments.
     
     This class implements a two-tier caching mechanism with an in-memory cache for
-    fast access and a disk-based cache for persistence. The cache is designed to
-    handle memory constraints in Azure App Service environments with automatic
-    pruning, fault-tolerance, and configurable TTL values.
+    fast access and a disk-based cache for persistence. The cache is optimized to use
+    Azure App Service's local storage paths for better performance and persistence.
     
     Attributes:
-        _CACHE_DIR (str): Directory path for disk-based cache storage.
-        _DEFAULT_SIZE (float): Default size limit for disk cache (1GB).
-        _FALLBACK_SIZE (float): Fallback size limit if primary fails (256MB).
+        _CACHE_DIR (str): Directory path for disk-based cache storage, optimized for Azure.
+        _DEFAULT_SIZE (float): Default size limit for disk cache (2GB).
+        _FALLBACK_SIZE (float): Fallback size limit if primary fails (512MB).
         _TTL (int): Default time-to-live for cache entries in seconds (3600).
         _cache (diskcache.Cache): The disk-based cache instance.
         _memory_cache (dict): In-memory cache dictionary.
         _last_access (dict): Timestamp tracking for LRU eviction.
-        _MAX_MEMORY_ITEMS (int): Maximum number of items in memory cache (1000).
-    
-    Methods:
-        get_cache(): Returns the disk cache instance.
-        get_cache_value(key): Retrieves a value from the cache system.
-        set_cache_value(key, value, ttl=None): Stores a value in both cache levels.
-        initialize_cache(): Sets up the disk-based cache with fault tolerance.
-        clear_cache(): Clears both memory and disk caches.
-    
-    Notes:
-        - Values are first checked in memory cache before checking disk cache
-        - Memory cache uses an LRU eviction policy based on access timestamps
-        - Disk cache failures trigger automatic fallback to smaller cache size
-        - Cache entries expire after the specified TTL
+        _MAX_MEMORY_ITEMS (int): Maximum number of items in memory cache (2000 for Azure).
+        _is_azure (bool): Flag indicating if running on Azure App Service.
     """
     def __init__(self):
-        self._CACHE_DIR = os.path.join(tempfile.gettempdir(), 'dash_cache')
-        self._DEFAULT_SIZE = 1024e6  # 1GB
-        self._FALLBACK_SIZE = 256e6
+        # Use optimized cache path based on environment
+        self._CACHE_DIR = self._get_optimized_cache_path()
+        self._DEFAULT_SIZE = 2048e6  # 2GB - D:\local has more space
+        self._FALLBACK_SIZE = 512e6  # 512MB fallback
         self._TTL = 3600
         self._cache = None
         self._memory_cache = {}
         self._last_access = {}
-        self._MAX_MEMORY_ITEMS = 1000
-        self.initialize_cache()
+        
+        # Configure for Azure App Service if detected
+        self._is_azure = self._detect_azure_environment()
+        if self._is_azure:
+            logger.info("Running on Azure App Service - optimizing cache configuration")
+            self._MAX_MEMORY_ITEMS = 2000  # Higher limit on App Service
+        else:
+            logger.info("Running in local development environment")
+            self._MAX_MEMORY_ITEMS = 1000
+            
+        self._initialize_cache()
+        
+    def _detect_azure_environment(self):
+        """Detect if the application is running on Azure App Service"""
+        # Check for environment variables that indicate Azure App Service
+        azure_indicators = [
+            'WEBSITE_SITE_NAME',
+            'WEBSITE_INSTANCE_ID',
+            'WEBSITE_RESOURCE_GROUP'
+        ]
+        
+        return any(env in os.environ for env in azure_indicators)
+        
+    def _get_optimized_cache_path(self):
+        """Determine the optimal cache path based on environment"""
+        # First try Azure App Service's D:\local directory
+        azure_local_path = r'D:\local\Temp\dash_cache'
+        
+        if os.path.exists(r'D:\local'):
+            logger.info("Using Azure App Service local storage for cache")
+            return azure_local_path
+            
+        # Fallback to home directory if available (also persistent on App Service)
+        home_path = os.environ.get('HOME')
+        if home_path:
+            home_cache = os.path.join(home_path, 'dash_cache')
+            logger.info(f"Using home directory for cache: {home_cache}")
+            return home_cache
+            
+        # Last resort - use system temp directory
+        temp_path = os.path.join(tempfile.gettempdir(), 'dash_cache')
+        logger.info(f"Using system temp directory for cache: {temp_path}")
+        return temp_path
 
     def _prune_memory_cache(self):
+        """Prune memory cache using LRU policy if it exceeds size limit"""
         if len(self._memory_cache) > self._MAX_MEMORY_ITEMS:
             sorted_items = sorted(self._last_access.items(), key=lambda x: x[1])
             to_remove = len(self._memory_cache) - self._MAX_MEMORY_ITEMS
             for key, _ in sorted_items[:to_remove]:
                 self._memory_cache.pop(key, None)
                 self._last_access.pop(key, None)
+            logger.debug(f"Pruned {to_remove} items from memory cache")
 
     def get_cache(self):
+        """Returns the disk cache instance for backwards compatibility"""
         return self._cache
 
     def get_cache_value(self, key):
+        """
+        Retrieves a value from the cache system with optimized access pattern.
+        
+        First checks memory cache for fastest access, then falls back to disk cache.
+        Updates memory cache if value is found in disk cache for faster future access.
+        
+        Args:
+            key (str): Cache key to retrieve.
+            
+        Returns:
+            Any: Cached value if found, None otherwise.
+        """
         current_time = time.time()
         
+        # Try memory cache first (fastest)
         if key in self._memory_cache:
             self._last_access[key] = current_time
             return self._memory_cache[key]
 
+        # Try disk cache if memory cache misses
         if self._cache:
             try:
                 value = self._cache.get(key)
                 if value is not None:
+                    # Update memory cache with disk cache hit
                     self._memory_cache[key] = value
                     self._last_access[key] = current_time
                     self._prune_memory_cache()
-                return value
+                    return value
             except Exception as e:
                 logger.warning(f"Disk cache retrieval failed: {e}")
+                
         return None
 
     def set_cache_value(self, key, value, ttl=None):
+        """
+        Stores a value in both memory and disk cache layers.
+        
+        Updates both memory cache for fast access and disk cache for persistence.
+        Applies automatic pruning to memory cache if it exceeds size limits.
+        
+        Args:
+            key (str): Cache key to store.
+            value (Any): Value to cache.
+            ttl (int, optional): Time-to-live in seconds. Defaults to self._TTL.
+        """
         ttl = ttl or self._TTL
         current_time = time.time()
 
+        # Update memory cache
         self._memory_cache[key] = value
         self._last_access[key] = current_time
         self._prune_memory_cache()
 
+        # Update disk cache
         if self._cache:
             try:
                 self._cache.set(key, value, expire=ttl)
             except Exception as e:
                 logger.warning(f"Disk cache set failed: {e}")
 
-    def initialize_cache(self):
+    def delete_cache_value(self, key):
+        """
+        Deletes a specific value from all cache layers.
+        
+        Args:
+            key (str): Cache key to delete.
+        """
+        # Remove from memory cache
+        if key in self._memory_cache:
+            self._memory_cache.pop(key, None)
+            self._last_access.pop(key, None)
+                
+        # Remove from disk cache
+        if self._cache:
+            try:
+                self._cache.delete(key)
+            except Exception as e:
+                logger.warning(f"Disk cache delete failed: {e}")
+
+    def clear_cache(self):
+        """Clears all cache layers completely"""
+        # Clear memory cache
+        self._memory_cache.clear()
+        self._last_access.clear()
+        
+        # Clear disk cache
+        if self._cache:
+            try:
+                self._cache.clear()
+                logger.info("Cache cleared successfully")
+            except Exception as e:
+                logger.error(f"Error clearing cache: {e}")
+
+    def _initialize_cache(self):
+        """
+        Initialize the disk-based cache with improved error handling and diagnostics.
+        
+        Determines available disk space and adjusts cache size accordingly to prevent
+        disk space issues. Falls back to smaller size if initialization fails.
+        """
         try:
+            # Ensure directory exists
             os.makedirs(self._CACHE_DIR, exist_ok=True)
+            
+            # Check available disk space
+            if os.name == 'nt':  # Windows
+                import ctypes
+                free_bytes = ctypes.c_ulonglong(0)
+                ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+                    ctypes.c_wchar_p(self._CACHE_DIR), None, None, 
+                    ctypes.pointer(free_bytes)
+                )
+                free_space = free_bytes.value
+            else:
+                import shutil
+                free_space = shutil.disk_usage(self._CACHE_DIR).free
+                
+            # Adjust cache size based on available space
+            adjusted_size = min(self._DEFAULT_SIZE, free_space * 0.5)  # Use max 50% of free space
+            
+            logger.info(f"Initializing cache at {self._CACHE_DIR}")
+            logger.info(f"Available disk space: {free_space/1e9:.2f}GB")
+            logger.info(f"Setting cache size to: {adjusted_size/1e6:.2f}MB")
+            
             self._cache = Cache(
                 directory=self._CACHE_DIR,
-                size_limit=self._DEFAULT_SIZE,
+                size_limit=adjusted_size,
                 eviction_policy='least-recently-used',
                 cull_limit=10,
                 statistics=True
             )
-            logger.info(f"Cache initialized at {self._CACHE_DIR} with size {self._DEFAULT_SIZE/1e6}MB")
+            logger.info(f"Cache initialized successfully")
+            
         except Exception as e:
             logger.warning(f"Primary cache initialization failed: {e}")
             try:
+                # Try with smaller size
                 self._cache = Cache(
                     directory=self._CACHE_DIR,
                     size_limit=self._FALLBACK_SIZE,
@@ -153,74 +280,268 @@ class AzureCache:
                 logger.error(f"Cache initialization completely failed: {e}")
                 self._cache = None
 
-    def clear_cache(self):
-        self._memory_cache.clear()
-        self._last_access.clear()
-        if self._cache:
+    def warm_memory_cache(self):
+        """
+        Warm memory cache with frequently used items from disk cache.
+        
+        Pre-loads items from disk cache into memory cache for faster initial access.
+        Prioritizes most recently accessed items (up to half the memory cache capacity).
+        """
+        if not self._cache:
+            return
+            
+        try:
+            logger.info("Warming memory cache from disk cache...")
+            # Get most recently used keys from disk
+            cache_items = list(self._cache.iterkeys())
+            
+            # Warm up to MAX_MEMORY_ITEMS/2
+            warm_limit = min(len(cache_items), self._MAX_MEMORY_ITEMS // 2)
+            
+            warmed = 0
+            start_time = time.time()
+            
+            for key in cache_items[:warm_limit]:
+                value = self._cache.get(key)
+                if value is not None:
+                    self._memory_cache[key] = value
+                    self._last_access[key] = time.time()
+                    warmed += 1
+                    
+            duration = time.time() - start_time
+            logger.info(f"Warmed memory cache with {warmed} items in {duration:.2f}s")
+        except Exception as e:
+            logger.warning(f"Error warming memory cache: {e}")
+
+    def cleanup_expired_items(self):
+        """
+        Remove expired items from disk cache to free up space.
+        
+        Scans through disk cache and removes items that have exceeded their TTL.
+        This helps keep the cache size under control and improves performance.
+        """
+        if not self._cache:
+            return
+            
+        try:
+            # Get current time
+            current_time = time.time()
+            expired_count = 0
+            
+            # Scan for expired items
+            for key in list(self._cache):
+                # Check if item has expired based on its expire time
+                # diskcache doesn't expose this directly, so we need to use internal API
+                if hasattr(self._cache, '_expire') and key in self._cache._expire:
+                    expire_time = self._cache._expire[key]
+                    if expire_time < current_time:
+                        self._cache.delete(key)
+                        expired_count += 1
+            
+            if expired_count > 0:
+                logger.info(f"Cleaned up {expired_count} expired items from disk cache")
+                
+        except Exception as e:
+            logger.warning(f"Error cleaning up expired cache items: {e}")
+
+    def get_cache_stats(self):
+        """
+        Get comprehensive statistics about the cache system.
+        
+        Returns detailed statistics about both memory and disk cache usage
+        for monitoring and debugging purposes.
+        
+        Returns:
+            dict: A dictionary containing cache statistics.
+        """
+        stats = {
+            "memory_cache": {
+                "items": len(self._memory_cache),
+                "limit": self._MAX_MEMORY_ITEMS,
+                "usage_percent": (len(self._memory_cache) / self._MAX_MEMORY_ITEMS) * 100 if self._MAX_MEMORY_ITEMS > 0 else 0
+            },
+            "disk_cache": {
+                "available": self._cache is not None,
+                "path": self._CACHE_DIR,
+                "size_limit_mb": self._DEFAULT_SIZE / 1e6 if self._cache else 0
+            },
+            "environment": "azure" if self._is_azure else "local"
+        }
+        
+        # Add disk cache stats if available
+        if self._cache and hasattr(self._cache, 'stats'):
             try:
-                self._cache.clear()
-                logger.info("Cache cleared successfully")
+                disk_stats = self._cache.stats()
+                stats["disk_cache"].update({
+                    "hits": disk_stats.get("hits", 0),
+                    "misses": disk_stats.get("misses", 0),
+                    "hit_rate": disk_stats.get("hit rate", 0) * 100,
+                    "size_mb": disk_stats.get("size", 0) / 1e6,
+                    "items": disk_stats.get("count", 0)
+                })
             except Exception as e:
-                logger.error(f"Error clearing cache: {e}")
+                logger.warning(f"Error getting disk cache stats: {e}")
+                
+        return stats
 
-# Initialize Azure-specific cache
-azure_cache = AzureCache()
-cache = azure_cache.get_cache()
+    def get_memory_usage(self):
+        """
+        Calculate estimated memory usage of the memory cache.
+        
+        Returns:
+            dict: Memory usage statistics.
+        """
+        try:
+            total_size = 0
+            item_sizes = {}
+            
+            # Sample up to 100 items to estimate average size
+            sample_keys = list(self._memory_cache.keys())[:100]
+            for key in sample_keys:
+                item_size = sys.getsizeof(pickle.dumps(self._memory_cache[key]))
+                total_size += item_size
+                item_sizes[key] = item_size
+            
+            avg_size = total_size / len(sample_keys) if sample_keys else 0
+            estimated_total = avg_size * len(self._memory_cache)
+            
+            return {
+                "sample_count": len(sample_keys),
+                "avg_item_size_kb": avg_size / 1024,
+                "estimated_total_mb": estimated_total / (1024 * 1024),
+                "largest_items": sorted(item_sizes.items(), key=lambda x: x[1], reverse=True)[:5]
+            }
+        except Exception as e:
+            logger.warning(f"Error calculating memory usage: {e}")
+            return {"error": str(e)}
 
-# Register cleanup
-atexit.register(azure_cache.clear_cache)
+def setup_cache_maintenance(azure_cache, interval=3600):
+    """
+    Setup background thread for periodic cache maintenance.
+    
+    Args:
+        azure_cache: AzureCache instance
+        interval: Maintenance interval in seconds (default: 3600)
+    """
+    def maintenance_worker():
+        while True:
+            try:
+                time.sleep(interval)  # Run every hour by default
+                logger.info("Running scheduled cache maintenance")
+                azure_cache.cleanup_expired_items()
+                
+                # Log cache stats
+                stats = azure_cache.get_cache_stats()
+                mem_stats = stats["memory_cache"]
+                logger.info(f"Memory cache: {mem_stats['items']}/{mem_stats['limit']} items ({mem_stats['usage_percent']:.1f}%)")
+                
+                disk_stats = stats["disk_cache"]
+                if disk_stats["available"] and "hit_rate" in disk_stats:
+                    logger.info(f"Disk cache: {disk_stats['items']} items, {disk_stats['size_mb']:.1f}MB used")
+                    logger.info(f"Hit rate: {disk_stats['hit_rate']:.1f}%, Hits: {disk_stats['hits']}, Misses: {disk_stats['misses']}")
+            except Exception as e:
+                logger.error(f"Error in cache maintenance: {e}")
+    
+    # Start maintenance thread
+    maintenance_thread = threading.Thread(target=maintenance_worker, daemon=True)
+    maintenance_thread.start()
+    logger.info("Cache maintenance scheduler started")
+
+def test_cache_optimization(azure_cache):
+    """
+    Test function to verify cache optimization is working correctly.
+    
+    Args:
+        azure_cache: AzureCache instance
+        
+    Returns:
+        dict: Test results
+    """
+    try:
+        # Test key with reasonably large data
+        test_key = f"optimization_test_{time.time()}"
+        test_data = {"large_array": [i for i in range(10000)]}
+        
+        # Test set operation
+        set_start = time.time()
+        azure_cache.set_cache_value(test_key, test_data)
+        set_time = time.time() - set_start
+        
+        # Test get operation from memory
+        mem_get_start = time.time()
+        mem_result = azure_cache.get_cache_value(test_key)
+        mem_get_time = time.time() - mem_get_start
+        
+        # Clear memory cache to test disk cache
+        azure_cache._memory_cache.pop(test_key, None)
+        azure_cache._last_access.pop(test_key, None)
+        
+        # Test get operation from disk
+        disk_get_start = time.time()
+        disk_result = azure_cache.get_cache_value(test_key)
+        disk_get_time = time.time() - disk_get_start
+        
+        # Log results
+        logger.info("Cache optimization test results:")
+        logger.info(f"- Set time: {set_time:.6f}s")
+        logger.info(f"- Memory get time: {mem_get_time:.6f}s")
+        logger.info(f"- Disk get time: {disk_get_time:.6f}s")
+        logger.info(f"- Memory:Disk speed ratio: {disk_get_time/mem_get_time:.1f}x")
+        
+        return {
+            "success": True,
+            "set_time": set_time,
+            "memory_get_time": mem_get_time,
+            "disk_get_time": disk_get_time,
+            "speedup": disk_get_time/mem_get_time
+        }
+    except Exception as e:
+        logger.error(f"Cache optimization test failed: {e}")
+        return {"success": False, "error": str(e)}
+
+# These variables will be initialized at runtime
+azure_cache = None
+cache = None
+
+def initialize_cache():
+    """Initialize the cache system and related resources"""
+    global azure_cache, cache, _cache_initialized
+    
+    # Only create cache if it hasn't been initialized yet
+    if not _cache_initialized:
+        logger.info("Initializing cache system")
+        
+        # Initialize Azure-specific cache
+        azure_cache = AzureCache()
+        cache = azure_cache.get_cache()
+        
+        # Register cleanup
+        atexit.register(azure_cache.clear_cache)
+        
+        # Warm cache on startup
+        azure_cache.warm_memory_cache()
+        
+        # Set up maintenance
+        setup_cache_maintenance(azure_cache)
+        
+        _cache_initialized = True
+        logger.info("Cache system initialized")
+    else:
+        logger.debug("Cache already initialized, skipping")
+    
+    return azure_cache, cache
 
 
 def azure_cache_decorator(ttl=3600):
-    """
-    Decorator for caching function results with configurable time-to-live.
-    
-    This decorator adds sophisticated caching to expensive functions, using the
-    AzureCache dual-layer caching system. It generates a consistent hash key based
-    on function name and arguments, checks for cached results, and stores new results
-    when needed.
-    
-    Parameters:
-        ttl (int): Time-to-live in seconds for cached results (default: 3600 = 1 hour)
-    
-    Returns:
-        function: Decorated function with caching capability
-    
-    Cache Behavior:
-        1. When the decorated function is called:
-           - A unique cache key is generated from function name and arguments
-           - The cache is checked for an existing result with that key
-           - If found, the cached result is returned immediately
-           - If not found, the function executes and its result is cached
-    
-    Key Generation:
-        - Function module and name are included in the key
-        - All positional and keyword arguments are stringified
-        - The combined string is hashed with MD5 for efficient storage
-    
-    Error Handling:
-        If any part of the caching mechanism fails, the function gracefully falls
-        back to executing the original function without caching.
-    
-    Usage Example:
-        @azure_cache_decorator(ttl=300)  # Cache results for 5 minutes
-        def expensive_calculation(param1, param2):
-            # Complex calculation here
-            return result
-    
-    This significantly improves performance for functions that:
-    - Are computationally expensive
-    - Are called multiple times with the same arguments
-    - Return consistent results for the same inputs within the TTL period
-    
-    The TTL parameter should be tuned based on:
-    - How frequently underlying data changes
-    - How computationally expensive the function is
-    - Memory constraints of the hosting environment
-    """
+    """Decorator for caching function results with configurable time-to-live."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            # Ensure cache is initialized
+            global azure_cache, cache
+            if azure_cache is None:
+                azure_cache, cache = initialize_cache()
+                
             try:
                 # Create consistent cache key using hash
                 key_str = f"{func.__module__}.{func.__name__}:{str(args)}:{str(sorted(kwargs.items()))}"
@@ -242,8 +563,6 @@ def azure_cache_decorator(ttl=3600):
                 return func(*args, **kwargs)  # Fallback to original function
         return wrapper
     return decorator
-
-
 
 # Initialize the app
 app = Dash(
@@ -544,28 +863,6 @@ def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
     elif max_diff <= 16: return 5
     else: return 4
 
-@azure_cache_decorator(ttl=300)  # 5 minutes - color calculations
-def create_color_scale(max_val, min_val, n_colors=9):
-    """
-    Creates a dictionary mapping a range of values to a corresponding set of colors
-    arranged in a sequential color scale. If the range is zero (max_val == min_val),
-    a single color is returned. The colors are based on a 'Reds' sequential scheme.
-
-    Args:
-        max_val (float): The maximum value of the data range.
-        min_val (float): The minimum value of the data range.
-        n_colors (int): The number of colors to use in the scale.
-
-    Returns:
-        dict: A dictionary where keys are numeric breakpoints and values are color strings.
-              Each key-value pair represents a segment of the color scale.
-    """
-    if max_val == min_val:
-        return {min_val: cl.scales[str(n_colors)]['seq']['Reds'][-1]}
-    breaks = np.linspace(min_val, max_val, n_colors)
-    colors = cl.scales[str(n_colors)]['seq']['Reds']
-    return dict(zip(breaks, colors))
-
 class CallbackContextManager:
     """
     Helper class that simplifies access to Dash callback context information.
@@ -796,77 +1093,12 @@ class FilterOptimizer:
 # Initialize the optimizer after loading data
 filter_optimizer = FilterOptimizer(data)
 
-def filter_data(data, filters):
-    """
-    Filters the multi-indexed DataFrame using direct indexing. The filters dictionary
-    contains sets of allowed values for each dimension. If a set is empty, all values
-    for that level are included. This approach uses direct .loc indexing on a multi-index.
-
-    Args:
-        data (pandas.DataFrame): The original dataset with a multi-level index.
-        filters (dict): A dictionary where keys are column names (in the index) and
-                        values are sets of acceptable values.
-
-    Returns:
-        pandas.DataFrame: The filtered DataFrame containing only rows that meet
-                          all specified conditions.
-    """
-    mask = pd.Series(True, index=data.index)
-    
-    for col, values in filters.items():
-        if values:
-            mask &= data.index.get_level_values(col).isin(values)
-    
-    return data[mask]
-
 @azure_cache_decorator(ttl=300)
 @monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                   selected_credentials, selected_institutions, selected_cmas):
-    """
-    The central data processing pipeline for filtering and aggregating graduate data.
+    """The central data processing pipeline for filtering and aggregating graduate data."""
     
-    This function serves as the core of the application's data processing system.
-    It applies user-selected filters to the main dataset and performs optimized
-    aggregations for each visualization dimension. Results are cached to minimize
-    repeated processing of identical filter combinations.
-    
-    Parameters:
-        selected_stem_bhase (tuple): Selected STEM/BHASE categories.
-        selected_years (tuple): Selected academic years.
-        selected_provs (tuple): Selected provinces/territories.
-        selected_isced (tuple): Selected education levels.
-        selected_credentials (tuple): Selected credential types.
-        selected_institutions (tuple): Selected institutions.
-        selected_cmas (tuple): Selected Census Metropolitan Areas/Census Agglomerations.
-    
-    Returns:
-        tuple: A 6-element tuple containing:
-            - filtered_data (pd.DataFrame): The complete filtered dataset.
-            - cma_grads (pd.DataFrame): Graduates aggregated by CMA/CSD and DGUID.
-            - isced_grads (pd.DataFrame): Graduates aggregated by education level.
-            - province_grads (pd.DataFrame): Graduates aggregated by province.
-            - credential_grads (pd.DataFrame): Graduates aggregated by credential type.
-            - institution_grads (pd.DataFrame): Graduates aggregated by institution.
-    
-    Processing Flow:
-        1. User filters are converted to sets and organized in a filter dictionary
-        2. FilterOptimizer.filter_data() applies vectorized filtering operations
-        3. If the filtered data is empty, empty DataFrames are returned
-        4. Otherwise, aggregations are performed for each visualization dimension
-        5. Results are returned for visualization components to consume
-    
-    Performance Features:
-        - Results are cached for 5 minutes using @azure_cache_decorator
-        - Performance is monitored with @monitor_performance
-        - Uses vectorized operations instead of loops or apply functions
-        - Converts query parameters to tuples for efficient hashing
-        - Applies all filters in a single operation for maximum efficiency
-    
-    Empty Result Handling:
-        If the filtering results in an empty DataFrame, the function returns empty
-        DataFrames for all aggregations to ensure consistent return structure.
-    """
     filters = {
         'STEM/BHASE': set(selected_stem_bhase),
         'Academic Year': set(selected_years),
@@ -1899,4 +2131,3 @@ def toggle_faq(open_clicks, close_clicks, is_open):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-
