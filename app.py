@@ -1075,7 +1075,9 @@ def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
                 color=sorted_data[y_column] if not selected_value else [bc.MAIN_RED if x == selected_value else bc.LIGHT_GREY for x in sorted_data[x_column]],
                 colorscale=COLOUR_SCALE if not selected_value else None
             )
-        )#, layout={'height': 5000}
+        ), layout = go.Layout(
+                              xaxis={'title': 'x-axis','fixedrange':True},
+                              yaxis={'title': 'y-axis','fixedrange':True})#, layout={'height': 5000}
     )
     
     '''

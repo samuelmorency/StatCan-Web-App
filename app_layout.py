@@ -5,6 +5,7 @@ from dash_extensions.javascript import assign
 import dash_leaflet as dl
 from dash_pivottable import PivotTable
 from faq import faq
+import plotly.graph_objs as go
 
 IIC_LOGO = "assets/logo.png"
 
@@ -429,7 +430,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
         dbc.CardHeader("Number of Graduates by ISCED Level of Education", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
-                dcc.Graph(id={'type': 'graph', 'item': 'isced'}, config={'displaylogo': False}),
+                dcc.Graph(id={'type': 'graph', 'item': 'isced'}, 
+                          config={'displaylogo': False}),
                 color="primary",
                 type="border",
             ),
