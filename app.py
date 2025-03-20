@@ -629,14 +629,14 @@ class CallbackContextManager:
 @azure_cache_decorator(ttl=3600)  # 1 hour cache
 def load_spatial_data():
     """
-    Loads geospatial data for provinces and combined CMA/CA polygons from parquet files.
+    Loads geospatial data for provinces and combined CMA/CSD polygons from parquet files.
     This includes coordinates and identifiers necessary for geographic rendering and
     linking data to specific regions. The result is cached to avoid repeated disk reads.
 
     Returns:
         tuple: A tuple containing:
                - A GeoDataFrame of provinces with cleaned longitude/latitude.
-               - A GeoDataFrame of combined CMA/CA regions with cleaned coordinates.
+               - A GeoDataFrame of combined CMA/CSD regions with cleaned coordinates.
     """
     
     if NEW_SF:
@@ -849,7 +849,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     Returns:
         tuple: A 6-element tuple containing:
             - filtered_data (pd.DataFrame): The complete filtered dataset.
-            - cma_grads (pd.DataFrame): Graduates aggregated by CMA/CA and DGUID.
+            - cma_grads (pd.DataFrame): Graduates aggregated by CMA/CSD and DGUID.
             - isced_grads (pd.DataFrame): Graduates aggregated by education level.
             - province_grads (pd.DataFrame): Graduates aggregated by province.
             - credential_grads (pd.DataFrame): Graduates aggregated by credential type.
@@ -931,7 +931,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
     It applies color scaling based on graduate counts and handles selection state.
     
     Parameters:
-        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit (CMA/CA).
+        row (pandas.Series): A row from a GeoDataFrame representing one geographic unit (CMA/CSD).
         colorscale (list): A list of color strings for representing graduate counts.
         max_graduates (int): The maximum graduates count in the dataset for normalization.
         min_graduates (int): The minimum graduates count in the dataset for normalization.
@@ -957,7 +957,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         rendering performance, particularly important for complex polygons.
     
     Tooltip Formatting:
-        Creates an HTML tooltip showing the CMA/CA name and formatted graduate count
+        Creates an HTML tooltip showing the CMA/CSD name and formatted graduate count
         with consistent Open Sans font styling and thousands separators.
     """
     graduates = float(row['graduates'])  # Convert to float for faster comparisons
@@ -987,7 +987,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
             'weight': 2 if is_selected else 0.5,
             'fillOpacity': 0.8
         },
-        'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA/CSD']}<br>Graduates: {int(graduates):,}</div>"
+        'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(graduates):,}</div>"
     }
 
 @azure_cache_decorator(ttl=300)
@@ -1219,7 +1219,7 @@ app.layout = html.Div([
 def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     """
     Determines an appropriate viewport update based on the user interaction that
-    triggered the callback. If the triggered action is selecting a CMA/CA feature,
+    triggered the callback. If the triggered action is selecting a CMA/CSD feature,
     it adjusts the viewport to zoom in on that feature. If filters changed, it
     recalculates bounds to show all visible features. If no adjustments are needed,
     it returns None.
@@ -1227,7 +1227,7 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     Args:
         triggered_id (str): The ID of the component that triggered the callback.
         cma_data (geopandas.GeoDataFrame): The spatial data with graduates information.
-        selected_feature (str or None): The currently selected CMA/CA DGUID, if any.
+        selected_feature (str or None): The currently selected CMA/CSD DGUID, if any.
 
     Returns:
         dict or None: A dictionary defining the new viewport or None if no update
@@ -1261,17 +1261,17 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
 )
 def update_selected_feature(click_data, n_clicks, stored_cma):
     """
-    Updates the currently selected CMA/CA feature when the map is clicked. If the
+    Updates the currently selected CMA/CSD feature when the map is clicked. If the
     'Clear Selection' button is clicked, resets the selection. This ensures that
     the selected feature state remains synchronized with user actions on the map.
 
     Args:
         click_data (dict or None): Data associated with a map feature click.
         n_clicks (int): The number of times the 'Clear Selection' button was clicked.
-        stored_cma (str or None): The currently stored CMA/CA DGUID.
+        stored_cma (str or None): The currently stored CMA/CSD DGUID.
 
     Returns:
-        str or None: The updated selected CMA/CA DGUID or None if the selection is cleared.
+        str or None: The updated selected CMA/CSD DGUID or None if the selection is cleared.
     """
     ctx_manager = CallbackContextManager(callback_context)
     
@@ -1560,7 +1560,7 @@ def update_visualizations(*args):
                         'weight': 2 if row['DGUID'] == selected_feature else 0.75,
                         'fillOpacity': 0.8
                     },
-                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>CMA/CA: {row['CMA/CSD']}<br>Graduates: {int(row['graduates']):,}</div>"
+                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(row['graduates']):,}</div>"
                 }
             }
             for (_, row), color in zip(cma_data.iterrows(), colors)

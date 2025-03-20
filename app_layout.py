@@ -415,7 +415,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     )
     
     map_card = dbc.Card([
-        dbc.CardHeader("Number of Graduates by CMA/CA", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CSD", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dl.Map(**map_args),
@@ -450,7 +450,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     cma_card = dbc.Card([
-        dbc.CardHeader("Number of Graduates by CMA/CA", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CSD", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([
