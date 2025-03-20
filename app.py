@@ -2130,4 +2130,4 @@ def toggle_faq(open_clicks, close_clicks, is_open):
     return is_open
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
