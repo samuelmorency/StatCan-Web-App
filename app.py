@@ -397,33 +397,10 @@ class CallbackContextManager:
             return self._triggered['value']
         return None
 
-@cache_utils.azure_cache_decorator(ttl=3600)  # 1 hour cache
-def load_spatial_data():
-    """
-    Loads geospatial data for provinces and combined CMA/CSD polygons from parquet files.
-    This includes coordinates and identifiers necessary for geographic rendering and
-    linking data to specific regions. The result is cached to avoid repeated disk reads.
-
-    Returns:
-        tuple: A tuple containing:
-               - A GeoDataFrame of provinces with cleaned longitude/latitude.
-               - A GeoDataFrame of combined CMA/CSD regions with cleaned coordinates.
-    """
-    
-    if NEW_SF:
-        if SIMPLIFIED_SF:
-            combined_longlat_clean = gpd.read_parquet("data/combined_longlat_simplified.parquet")
-        else:
-            combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean.parquet")
-    else:
-        combined_longlat_clean = gpd.read_parquet("data/combined_longlat_clean - Backup.parquet")
-        
-    province_longlat_clean = gpd.read_parquet("data/province_longlat_clean.parquet")
-    
-    return province_longlat_clean, combined_longlat_clean
-
 # Load initial data
-province_longlat_clean, combined_longlat_clean = load_spatial_data()
+combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(lambda: gpd.read_parquet(
+    "data/combined_longlat_simplified.parquet" if SIMPLIFIED_SF == True else "data/combined_longlat_clean.parquet"
+))()
 data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_pickle)("data/cleaned_data.pkl")
 print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
 print("GeoDataFrame columns:", combined_longlat_clean.columns)
