@@ -35,8 +35,7 @@ import json
 import pickle
 import sys
 
-import cache_utils
-from cache_utils import initialize_cache, azure_cache_decorator, logger, monitor_cache_usage
+import cache_utils, data_utils
 
 NEW_DATA = True
 NEW_SF = True
@@ -55,7 +54,7 @@ app = Dash(
 )
 server = app.server
 
-initialize_cache()
+cache_utils.initialize_cache()
 
 # Set global font styles for the app 
 app.index_string = '''
@@ -204,7 +203,7 @@ class MapState:
 # Initialize map state
 map_state = MapState()
 
-@azure_cache_decorator(ttl=600)
+@cache_utils.azure_cache_decorator(ttl=600)
 def calculate_optimal_viewport(bounds, padding_factor=0.1):
     """
     Computes an optimal map viewport given geographic bounds with proper padding.
@@ -289,7 +288,7 @@ def calculate_optimal_viewport(bounds, padding_factor=0.1):
             'zoom': 4
         }
 
-@azure_cache_decorator(ttl=600)
+@cache_utils.azure_cache_decorator(ttl=600)
 def calculate_zoom_level(min_lat, min_lon, max_lat, max_lon):
     """
     Determines an appropriate map zoom level based on the geographic area size.
@@ -398,7 +397,7 @@ class CallbackContextManager:
             return self._triggered['value']
         return None
 
-@azure_cache_decorator(ttl=3600)  # 1 hour cache
+@cache_utils.azure_cache_decorator(ttl=3600)  # 1 hour cache
 def load_spatial_data():
     """
     Loads geospatial data for provinces and combined CMA/CSD polygons from parquet files.
@@ -423,7 +422,7 @@ def load_spatial_data():
     
     return province_longlat_clean, combined_longlat_clean
 
-@azure_cache_decorator(ttl=3600)  # 1 hour cache
+@cache_utils.azure_cache_decorator(ttl=3600)  # 1 hour cache
 def load_and_process_educational_data():
     """
     Loads preprocessed educational data from a pickle file. The data includes variables
@@ -462,26 +461,6 @@ def load_and_process_educational_data():
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
 #data.to_csv('data.csv', index=False)
-
-# Add performance monitoring decorator
-def monitor_performance(func):
-    metrics = defaultdict(list)
-    
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = perf_counter()
-        result = func(*args, **kwargs)
-        execution_time = perf_counter() - start_time
-        metrics[func.__name__].append(execution_time)
-        
-        # Log average performance every 10 calls
-        if len(metrics[func.__name__]) >= 10:
-            avg_time = sum(metrics[func.__name__]) / len(metrics[func.__name__])
-            logger.info(f"{func.__name__} average execution time: {avg_time:.4f}s")
-            metrics[func.__name__] = []
-            
-        return result
-    return wrapper
 
 class FilterOptimizer:
     """
@@ -527,7 +506,7 @@ class FilterOptimizer:
             self._index_cache[column] = self._data.index.get_level_values(column)
         return self._index_cache[column]
     
-    @monitor_performance
+    @data_utils.monitor_performance
     def filter_data(self, filters):
         """Optimized filtering with caching and vectorized operations"""
         filter_hash = self._create_filter_hash(filters)
@@ -560,8 +539,8 @@ class FilterOptimizer:
 # Initialize the optimizer after loading data
 filter_optimizer = FilterOptimizer(data)
 
-@azure_cache_decorator(ttl=300)
-@monitor_performance
+@cache_utils.azure_cache_decorator(ttl=300)
+@data_utils.monitor_performance
 def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
                   selected_credentials, selected_institutions, selected_cmas):
     """The central data processing pipeline for filtering and aggregating graduate data."""
@@ -683,7 +662,7 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(graduates):,}</div>"
     }
 
-@azure_cache_decorator(ttl=300)
+@cache_utils.azure_cache_decorator(ttl=300)
 def create_chart(dataframe, x_column, y_column, x_label, selected_value=None):
     """
     Creates a standardized horizontal bar chart for visualization dimensions.
@@ -1057,7 +1036,7 @@ def update_selection(clickData, n_clicks, stored_value, figure):
                 
             return None if stored_value == clicked_value else clicked_value
         except Exception as e:
-            logger.error(f"Error parsing pattern ID: {e}")
+            cache_utils.logger.error(f"Error parsing pattern ID: {e}")
             return stored_value
     
     return stored_value
@@ -1304,7 +1283,7 @@ def update_visualizations(*args):
         )
         
         # Monitor cache at the start of major updates
-        monitor_cache_usage()
+        cache_utils.monitor_cache_usage()
         
         return (
             geojson_data,
@@ -1317,7 +1296,7 @@ def update_visualizations(*args):
         )
         
     except Exception as e:
-        logger.error(f"Error in update_visualizations: {str(e)}")
+        cache_utils.logger.error(f"Error in update_visualizations: {str(e)}")
         return create_empty_response()
 
 @app.callback(
@@ -1352,7 +1331,7 @@ def reset_filters(n_clicks):
         [], [], [], [], []  # Added empty list for CMA filter
     )
 
-@azure_cache_decorator(ttl=300)  # 5 minutes - filter options change with selections
+@cache_utils.azure_cache_decorator(ttl=300)  # 5 minutes - filter options change with selections
 def filter_options(data, column, selected_filters):
     """
     Returns available options for a filter based on currently selected values in other filters.
@@ -1498,7 +1477,7 @@ def download_pivot_data(n_clicks, data, cols, rows, vals):
         )
         
     except Exception as e:
-        logger.error(f"Error in download_pivot_data: {str(e)}")
+        cache_utils.logger.error(f"Error in download_pivot_data: {str(e)}")
         raise PreventUpdate
 
 @app.callback(
