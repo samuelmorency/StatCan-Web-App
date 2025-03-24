@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 import brand_colours as bc
 from cache_utils import azure_cache_decorator, logger
 
+CHART_HEIGHT = 500
+
 # Performance monitoring decorator (log average exec time every 10 calls)
 def monitor_performance(func):
     metrics = []
@@ -133,7 +135,7 @@ def create_chart(df, x_column, y_column, x_label, selected_value=None):
         font=dict(family='Open Sans', size=12, color=bc.IIC_BLACK),
         plot_bgcolor='#D5DADC', paper_bgcolor='white',
         margin=dict(l=5, r=50, t=25, b=5),
-        height=1000 if x_label in ['Institution', 'Census Metropolitan Area'] else 500,
+        height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area'] else CHART_HEIGHT,
         # Remove unnecessary modebar buttons:
         modebar_remove=['zoom','pan','select','zoomIn','zoomOut','autoScale','resetScale','lasso2d']
     )

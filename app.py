@@ -1069,7 +1069,7 @@ def update_visualizations(*args):
         geojson_data = {'type': 'FeatureCollection', 'features': features}
         
         # Create charts with selections (simplified without chart type parameter)
-        fig_isced = create_chart(
+        fig_isced = data_utils.create_chart(
             isced_grads, 
             'ISCED Level of Education', 
             'graduates',
@@ -1077,7 +1077,7 @@ def update_visualizations(*args):
             selected_isced
         )
         
-        fig_province = create_chart(
+        fig_province = data_utils.create_chart(
             province_grads, 
             'Province or Territory', 
             'graduates',
@@ -1086,7 +1086,7 @@ def update_visualizations(*args):
         )
 
         # Create new charts
-        fig_cma = create_chart(
+        fig_cma = data_utils.create_chart(
             cma_grads,
             'CMA/CSD',
             'graduates',
@@ -1094,7 +1094,7 @@ def update_visualizations(*args):
             selected_feature
         )
 
-        fig_credential = create_chart(
+        fig_credential = data_utils.create_chart(
             credential_grads,
             'Credential Type',
             'graduates',
@@ -1102,7 +1102,7 @@ def update_visualizations(*args):
             selected_credential
         )
 
-        fig_institution = create_chart(
+        fig_institution = data_utils.create_chart(
             institution_grads,
             'Institution',
             'graduates',
