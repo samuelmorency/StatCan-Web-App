@@ -499,39 +499,6 @@ def create_geojson_feature(row, colorscale, max_graduates, min_graduates, select
         'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(graduates):,}</div>"
     }
 
-def create_empty_response():
-    """
-    Produces a set of empty or default return values for callbacks that must always
-    return consistent output structures even when data is unavailable or an error
-    occurs. The empty response includes:
-    - An empty GeoJSON structure for the map.
-    - Empty figure objects for charts.
-    - Empty lists for table data and columns.
-    - A default viewport centered on Canada.
-
-    Returns:
-        tuple: A tuple containing empty or default components:
-               - Empty geojson data (dict)
-               - Empty figure for ISCED chart (dict)
-               - Empty figure for province chart (dict)
-               - Empty lists for table data and columns (list, list)
-               - A default viewport dictionary with bounds and transition
-    """
-    empty_geojson = {'type': 'FeatureCollection', 'features': []}
-    empty_fig = {}
-    empty_row_data = []
-    empty_column_defs = []
-    default_bounds = [[41, -141], [83, -52]]  # Canada bounds
-    
-    return (
-        empty_geojson,
-        empty_fig,
-        empty_fig,
-        empty_row_data,  # Changed from empty_data
-        empty_column_defs,  # Changed from empty_columns
-        dict(bounds=default_bounds, transition="flyToBounds")
-    )
-
 def update_selected_value(click_data, n_clicks, stored_value, triggered_id, clear_id, chart_id, figure=None):
     """
     A generic helper function that updates a selected value based on chart click interactions
@@ -628,87 +595,87 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     
     return None
 
-@app.callback(
-    Output({'type': 'store', 'item': MATCH}, 'data'),
-    Input({'type': 'graph', 'item': MATCH}, 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State({'type': 'store', 'item': MATCH}, 'data'),
-    State({'type': 'graph', 'item': MATCH}, 'figure'),
-    prevent_initial_call=True
-)
-def update_selection(clickData, n_clicks, stored_value, figure):
-    """
-    Manages selection state for all chart visualizations using pattern matching.
+# @app.callback(
+#     Output({'type': 'store', 'item': MATCH}, 'data'),
+#     Input({'type': 'graph', 'item': MATCH}, 'clickData'),
+#     Input('clear-selection', 'n_clicks'),
+#     State({'type': 'store', 'item': MATCH}, 'data'),
+#     State({'type': 'graph', 'item': MATCH}, 'figure'),
+#     prevent_initial_call=True
+# )
+# def update_selection(clickData, n_clicks, stored_value, figure):
+#     """
+#     Manages selection state for all chart visualizations using pattern matching.
     
-    This callback processes clicks on any chart and updates the corresponding selection
-    state. It uses Dash's pattern matching to handle all charts with a single callback,
-    making the selection system maintainable and consistent. The pattern matching is
-    based on the 'item' key which identifies the dimension (e.g., 'isced', 'province').
+#     This callback processes clicks on any chart and updates the corresponding selection
+#     state. It uses Dash's pattern matching to handle all charts with a single callback,
+#     making the selection system maintainable and consistent. The pattern matching is
+#     based on the 'item' key which identifies the dimension (e.g., 'isced', 'province').
     
-    Triggers:
-        - Clicking on any bar in any chart visualization
-        - Clicking the "Clear Selection" button
+#     Triggers:
+#         - Clicking on any bar in any chart visualization
+#         - Clicking the "Clear Selection" button
     
-    Parameters:
-        clickData (dict or None): Data from chart click event containing the clicked value.
-        n_clicks (int): Number of times "Clear Selection" button has been clicked.
-        stored_value (str or None): Currently stored selected value.
-        figure (dict): The current figure object to determine bar orientation.
+#     Parameters:
+#         clickData (dict or None): Data from chart click event containing the clicked value.
+#         n_clicks (int): Number of times "Clear Selection" button has been clicked.
+#         stored_value (str or None): Currently stored selected value.
+#         figure (dict): The current figure object to determine bar orientation.
     
-    Returns:
-        str or None: The new selected value, or None to clear selection.
+#     Returns:
+#         str or None: The new selected value, or None to clear selection.
     
-    Selection Logic:
-        1. If "Clear Selection" button is clicked, returns None for all stores.
-        2. For chart clicks:
-           - Extracts dimension type from pattern-matched component ID
-           - Determines if chart is horizontal or vertical
-           - Gets clicked value based on orientation (x or y coordinate)
-           - If clicked value matches stored value, toggles off (returns None)
-           - Otherwise sets the new clicked value as selection
+#     Selection Logic:
+#         1. If "Clear Selection" button is clicked, returns None for all stores.
+#         2. For chart clicks:
+#            - Extracts dimension type from pattern-matched component ID
+#            - Determines if chart is horizontal or vertical
+#            - Gets clicked value based on orientation (x or y coordinate)
+#            - If clicked value matches stored value, toggles off (returns None)
+#            - Otherwise sets the new clicked value as selection
     
-    Pattern Matching:
-        Uses {'type': 'store', 'item': MATCH} to match with corresponding store.
-        The 'item' key connects the graph, store, and data dimension (e.g., 'isced').
+#     Pattern Matching:
+#         Uses {'type': 'store', 'item': MATCH} to match with corresponding store.
+#         The 'item' key connects the graph, store, and data dimension (e.g., 'isced').
     
-    This system creates a toggle behavior where:
-    - First click on an item selects it
-    - Second click on same item deselects it
-    - Click on different item changes selection to that item
-    - "Clear Selection" button deselects everything
+#     This system creates a toggle behavior where:
+#     - First click on an item selects it
+#     - Second click on same item deselects it
+#     - Click on different item changes selection to that item
+#     - "Clear Selection" button deselects everything
     
-    Once a value is stored in the store component, it triggers the update_visualizations
-    callback which applies cross-filtering based on the selection.
-    """
-    ctx = callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
+#     Once a value is stored in the store component, it triggers the update_visualizations
+#     callback which applies cross-filtering based on the selection.
+#     """
+#     ctx = callback_context
+#     if not ctx.triggered:
+#         raise PreventUpdate
         
-    triggered_prop_id = ctx.triggered[0]['prop_id'].split('.')[0]
+#     triggered_prop_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    if triggered_prop_id == 'clear-selection':
-        return None
+#     if triggered_prop_id == 'clear-selection':
+#         return None
     
-    if clickData and 'points' in clickData:
-        try:
-            pattern_dict = json.loads(triggered_prop_id.replace("'", "\""))
-            item_type = pattern_dict.get('item')
+#     if clickData and 'points' in clickData:
+#         try:
+#             pattern_dict = json.loads(triggered_prop_id.replace("'", "\""))
+#             item_type = pattern_dict.get('item')
             
-            orientation = 'v'
-            if figure and 'data' in figure and figure['data'][0].get('orientation') == 'h':
-                orientation = 'h'
+#             orientation = 'v'
+#             if figure and 'data' in figure and figure['data'][0].get('orientation') == 'h':
+#                 orientation = 'h'
             
-            if orientation == 'h':
-                clicked_value = clickData['points'][0]['y']
-            else:
-                clicked_value = clickData['points'][0]['x']
+#             if orientation == 'h':
+#                 clicked_value = clickData['points'][0]['y']
+#             else:
+#                 clicked_value = clickData['points'][0]['x']
                 
-            return None if stored_value == clicked_value else clicked_value
-        except Exception as e:
-            cache_utils.logger.error(f"Error parsing pattern ID: {e}")
-            return stored_value
+#             return None if stored_value == clicked_value else clicked_value
+#         except Exception as e:
+#             cache_utils.logger.error(f"Error parsing pattern ID: {e}")
+#             return stored_value
     
-    return stored_value
+#     return stored_value
 
 @app.callback(
     Output('cma-geojson', 'data'),
@@ -1254,26 +1221,6 @@ def toggle_user_guide(open_clicks, close_clicks, is_open):
         return not is_open, dash.no_update
         
     return is_open, dash.no_update
-
-@app.callback(
-    Output("faq-modal", "is_open"),
-    [
-        Input("open-faq-button", "n_clicks"),
-        Input("close-faq-button", "n_clicks")
-    ],
-    State("faq-modal", "is_open"),
-)
-def toggle_faq(open_clicks, close_clicks, is_open):
-    """Toggle FAQ modal and load content"""
-    if not any(clicks for clicks in [open_clicks, close_clicks]):
-        raise PreventUpdate
-        
-    if open_clicks or close_clicks:
-        if not is_open:
-            return not is_open
-        return not is_open
-        
-    return is_open
 
 import callbacks
 

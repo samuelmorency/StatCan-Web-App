@@ -32,36 +32,36 @@ def update_selected_feature(click_data, n_clicks, current_selection):
         return None if current_selection == clicked_id else clicked_id
     return current_selection
 
-# @app.callback(
-#     Output({'type': 'store', 'item': MATCH}, 'data'),
-#     Input({'type': 'graph', 'item': MATCH}, 'clickData'),
-#     Input('clear-selection', 'n_clicks'),
-#     State({'type': 'store', 'item': MATCH}, 'data'),
-#     State({'type': 'graph', 'item': MATCH}, 'figure'),
-#     prevent_initial_call=True
-# )
-# def update_chart_selection(clickData, clear_clicks, stored_value, figure):
-#     """Generic callback to update the selection store for any chart (using pattern matching)."""
-#     ctx = callback_context
-#     if not ctx.triggered:
-#         raise PreventUpdate
-#     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-#     if trigger_id == 'clear-selection':
-#         return None
-#     if clickData and 'points' in clickData:
-#         # Parse the pattern-matched component ID (which comes as a JSON string)
-#         try:
-#             pattern = json.loads(trigger_id.replace("'", "\""))
-#             # Determine orientation of the clicked bar from the figure
-#             orientation = 'h'
-#             if figure and figure.get('data') and figure['data'][0].get('orientation') != 'h':
-#                 orientation = 'v'
-#             clicked_val = (clickData['points'][0]['y'] if orientation == 'h' else 
-#                            clickData['points'][0]['x'])
-#             return None if stored_value == clicked_val else clicked_val
-#         except Exception as e:
-#             cache_utils.logger.error(f"Error parsing selection pattern: {e}")
-#     return stored_value
+@dash.callback(
+    Output({'type': 'store', 'item': MATCH}, 'data'),
+    Input({'type': 'graph', 'item': MATCH}, 'clickData'),
+    Input('clear-selection', 'n_clicks'),
+    State({'type': 'store', 'item': MATCH}, 'data'),
+    State({'type': 'graph', 'item': MATCH}, 'figure'),
+    prevent_initial_call=True
+)
+def update_chart_selection(clickData, clear_clicks, stored_value, figure):
+    """Generic callback to update the selection store for any chart (using pattern matching)."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if trigger_id == 'clear-selection':
+        return None
+    if clickData and 'points' in clickData:
+        # Parse the pattern-matched component ID (which comes as a JSON string)
+        try:
+            pattern = json.loads(trigger_id.replace("'", "\""))
+            # Determine orientation of the clicked bar from the figure
+            orientation = 'h'
+            if figure and figure.get('data') and figure['data'][0].get('orientation') != 'h':
+                orientation = 'v'
+            clicked_val = (clickData['points'][0]['y'] if orientation == 'h' else 
+                           clickData['points'][0]['x'])
+            return None if stored_value == clicked_val else clicked_val
+        except Exception as e:
+            cache_utils.logger.error(f"Error parsing selection pattern: {e}")
+    return stored_value
 
 # @app.callback(
 #     Output('cma-geojson', 'data'),
@@ -327,21 +327,21 @@ def update_selected_feature(click_data, n_clicks, current_selection):
 #         return True, dcc.Markdown(guide_md)
 #     return False if is_open else is_open, no_update
 
-# @app.callback(
-#     Output("faq-modal", "is_open"),
-#     Input("open-faq-button", "n_clicks"),
-#     Input("close-faq-button", "n_clicks"),
-#     State("faq-modal", "is_open")
-# )
-# def toggle_faq(open_clicks, close_clicks, is_open):
-#     if not (open_clicks or close_clicks):
-#         raise PreventUpdate
-#     return (not is_open) if (open_clicks or close_clicks) else is_open
+@dash.callback(
+    Output("faq-modal", "is_open"),
+    Input("open-faq-button", "n_clicks"),
+    Input("close-faq-button", "n_clicks"),
+    State("faq-modal", "is_open")
+)
+def toggle_faq(open_clicks, close_clicks, is_open):
+    if not (open_clicks or close_clicks):
+        raise PreventUpdate
+    return (not is_open) if (open_clicks or close_clicks) else is_open
 
-# def create_empty_response():
-#     """Produce empty outputs (geojson, 5 figs, viewport) for no-data cases."""
-#     empty_geojson = {'type': 'FeatureCollection', 'features': []}
-#     empty_fig = {}
-#     default_bounds = [[41, -141], [83, -52]]  # Canada bounding box
-#     default_viewport = {'bounds': default_bounds, 'transition': "flyToBounds"}
-#     return (empty_geojson, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, default_viewport)
+def create_empty_response():
+    """Produce empty outputs (geojson, 5 figs, viewport) for no-data cases."""
+    empty_geojson = {'type': 'FeatureCollection', 'features': []}
+    empty_fig = {}
+    default_bounds = [[41, -141], [83, -52]]  # Canada bounding box
+    default_viewport = {'bounds': default_bounds, 'transition': "flyToBounds"}
+    return (empty_geojson, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, default_viewport)
