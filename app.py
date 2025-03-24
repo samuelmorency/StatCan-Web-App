@@ -431,61 +431,6 @@ data_utils.isced_options_full = isced_options_full
 data_utils.credential_options_full = credential_options_full
 data_utils.institution_options_full = institution_options_full
 
-@cache_utils.azure_cache_decorator(ttl=300)
-@data_utils.monitor_performance
-def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selected_isced, 
-                  selected_credentials, selected_institutions, selected_cmas):
-    """The central data processing pipeline for filtering and aggregating graduate data."""
-    
-    filters = {
-        'STEM/BHASE': set(selected_stem_bhase),
-        'Academic Year': set(selected_years),
-        'Province or Territory': set(selected_provs),
-        'ISCED Level of Education': set(selected_isced),
-        'Credential Type': set(selected_credentials),
-        'Institution': set(selected_institutions),
-        'CMA/CSD': set(selected_cmas),
-        'DGUID': set()
-    }
-
-    # Use optimized filtering
-    filtered_data = data_utils.filter_optimizer.filter_data(filters)
-    if filtered_data.empty:
-        return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-    # Use vectorized operations instead of parallel processing
-    aggregations = {
-        'cma': filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum(),
-        'isced': filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum(),
-        'province': filtered_data.groupby("Province or Territory", observed=True)['Value'].sum(),
-        'credential': filtered_data.groupby("Credential Type", observed=True)['Value'].sum(),
-        'institution': filtered_data.groupby("Institution", observed=True)['Value'].sum()
-    }
-    
-    # Pre-allocate DataFrames for better memory efficiency
-    cma_grads = pd.DataFrame()
-    isced_grads = pd.DataFrame()
-    province_grads = pd.DataFrame()
-    credential_grads = pd.DataFrame()
-    institution_grads = pd.DataFrame()
-    
-    # Perform aggregations with optimized settings
-    with pd.option_context('mode.chained_assignment', None):
-        cma_grads = aggregations['cma'].reset_index(name='graduates')
-        isced_grads = aggregations['isced'].reset_index(name='graduates')
-        province_grads = aggregations['province'].reset_index(name='graduates')
-        credential_grads = aggregations['credential'].reset_index(name='graduates')
-        institution_grads = aggregations['institution'].reset_index(name='graduates')
-
-    return (
-        filtered_data.reset_index(),
-        cma_grads,
-        isced_grads,
-        province_grads,
-        credential_grads,
-        institution_grads
-    )
-
 def create_geojson_feature(row, colorscale, max_graduates, min_graduates, selected_feature):
     """
     Creates a GeoJSON feature dictionary for a single geographic unit with styling.
@@ -1023,7 +968,7 @@ def update_visualizations(*args):
                 pass
 
         # Process data with optimized function
-        filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = preprocess_data(
+        filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = data_utils.preprocess_data(
             tuple(stem_bhase or []),
             tuple(years or []),
             tuple(provs or []),
