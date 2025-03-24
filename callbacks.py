@@ -8,7 +8,7 @@ import json, pandas as pd
 import brand_colours as bc
 import plotly.express as px
 from pathlib import Path
-from cache_utils import logger
+#from cache_utils import logger
 import dash
 
 @dash.callback(
@@ -145,11 +145,11 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
 
     # Step 3: Prepare GeoJSON data for the map
     # Merge geometry with aggregated data (inner join to include only regions with data)
-    logger.info(f"combined_longlat_clean shape: {combined_longlat_clean.shape}")
-    logger.info(f"combined_longlat_clean sample:\n{combined_longlat_clean.head()}")
+    # logger.info(f"combined_longlat_clean shape: {combined_longlat_clean.shape}")
+    # logger.info(f"combined_longlat_clean sample:\n{combined_longlat_clean.head()}")
     cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='inner')
-    logger.info(f"cma_data shape after merge: {cma_data.shape}")
-    logger.info(f"cma_data sample:\n{cma_data.head()}")
+    # logger.info(f"cma_data shape after merge: {cma_data.shape}")
+    # logger.info(f"cma_data sample:\n{cma_data.head()}")
     if cma_data.empty:
         return create_empty_response()
     # Determine if we should update map viewport (on filter changes or new selection)
