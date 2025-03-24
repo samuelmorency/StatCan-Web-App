@@ -677,263 +677,263 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     
 #     return stored_value
 
-@app.callback(
-    Output('cma-geojson', 'data'),
-    Output({'type': 'graph', 'item': 'isced'}, 'figure'),
-    Output({'type': 'graph', 'item': 'province'}, 'figure'),
-    Output({'type': 'graph', 'item': 'cma'}, 'figure'),
-    Output({'type': 'graph', 'item': 'credential'}, 'figure'),
-    Output({'type': 'graph', 'item': 'institution'}, 'figure'),
-    Output('map', 'viewport'),
-    Input('stem-bhase-filter', 'value'),
-    Input('year-filter', 'value'),
-    Input('prov-filter', 'value'),
-    Input('isced-filter', 'value'),
-    Input('credential-filter', 'value'),
-    Input('institution-filter', 'value'),
-    Input('cma-filter', 'value'),
-    Input({'type': 'store', 'item': 'isced'}, 'data'),
-    Input({'type': 'store', 'item': 'province'}, 'data'),
-    Input('selected-feature', 'data'),
-    Input({'type': 'store', 'item': 'credential'}, 'data'),
-    Input({'type': 'store', 'item': 'institution'}, 'data'),
-    Input({'type': 'store', 'item': 'cma'}, 'data'),
-    State('map', 'viewport')
-)
-def update_visualizations(*args):
-    """
-    The central cross-filtering callback that coordinates all visualizations.
+# @app.callback(
+#     Output('cma-geojson', 'data'),
+#     Output({'type': 'graph', 'item': 'isced'}, 'figure'),
+#     Output({'type': 'graph', 'item': 'province'}, 'figure'),
+#     Output({'type': 'graph', 'item': 'cma'}, 'figure'),
+#     Output({'type': 'graph', 'item': 'credential'}, 'figure'),
+#     Output({'type': 'graph', 'item': 'institution'}, 'figure'),
+#     Output('map', 'viewport'),
+#     Input('stem-bhase-filter', 'value'),
+#     Input('year-filter', 'value'),
+#     Input('prov-filter', 'value'),
+#     Input('isced-filter', 'value'),
+#     Input('credential-filter', 'value'),
+#     Input('institution-filter', 'value'),
+#     Input('cma-filter', 'value'),
+#     Input({'type': 'store', 'item': 'isced'}, 'data'),
+#     Input({'type': 'store', 'item': 'province'}, 'data'),
+#     Input('selected-feature', 'data'),
+#     Input({'type': 'store', 'item': 'credential'}, 'data'),
+#     Input({'type': 'store', 'item': 'institution'}, 'data'),
+#     Input({'type': 'store', 'item': 'cma'}, 'data'),
+#     State('map', 'viewport')
+# )
+# def update_visualizations(*args):
+#     """
+#     The central cross-filtering callback that coordinates all visualizations.
     
-    This callback is the heart of the application's interactive cross-filtering system.
-    It responds to both filter changes and visualization selections to update all
-    visualizations simultaneously, ensuring they remain synchronized and reflect the
-    current filtered and selected state.
+#     This callback is the heart of the application's interactive cross-filtering system.
+#     It responds to both filter changes and visualization selections to update all
+#     visualizations simultaneously, ensuring they remain synchronized and reflect the
+#     current filtered and selected state.
     
-    Triggers:
-        - Changes to any filter (STEM/BHASE, Year, Province, etc.)
-        - Selection of any element (map feature, chart bar)
-        - Clearing of selection
-        - Reset of filters
+#     Triggers:
+#         - Changes to any filter (STEM/BHASE, Year, Province, etc.)
+#         - Selection of any element (map feature, chart bar)
+#         - Clearing of selection
+#         - Reset of filters
     
-    Processing Flow:
-        1. Identifies which input triggered the callback
-        2. Processes data through preprocess_data() with current filters
-        3. If any selection exists (ISCED, Province, etc.), applies cross-filtering:
-           - Creates a boolean mask for each active selection
-           - Combines masks with logical AND operations
-           - Re-aggregates data based on the combined mask
-        4. Builds map visualization:
-           - Merges filtered data with geographic features
-           - Creates GeoJSON with dynamic styling based on graduate counts
-           - Highlights selected features
-        5. Creates chart visualizations:
-           - Generates horizontal bar charts for each dimension
-           - Applies consistent styling and highlighting
-        6. Updates map viewport if necessary:
-           - Centers on selection if a feature was clicked
-           - Shows all visible features after filter changes
+#     Processing Flow:
+#         1. Identifies which input triggered the callback
+#         2. Processes data through preprocess_data() with current filters
+#         3. If any selection exists (ISCED, Province, etc.), applies cross-filtering:
+#            - Creates a boolean mask for each active selection
+#            - Combines masks with logical AND operations
+#            - Re-aggregates data based on the combined mask
+#         4. Builds map visualization:
+#            - Merges filtered data with geographic features
+#            - Creates GeoJSON with dynamic styling based on graduate counts
+#            - Highlights selected features
+#         5. Creates chart visualizations:
+#            - Generates horizontal bar charts for each dimension
+#            - Applies consistent styling and highlighting
+#         6. Updates map viewport if necessary:
+#            - Centers on selection if a feature was clicked
+#            - Shows all visible features after filter changes
     
-    Outputs:
-        - GeoJSON data for the map
-        - Figure objects for each chart (ISCED, Province, CMA, Credential, Institution)
-        - Map viewport settings
+#     Outputs:
+#         - GeoJSON data for the map
+#         - Figure objects for each chart (ISCED, Province, CMA, Credential, Institution)
+#         - Map viewport settings
     
-    Performance Considerations:
-        - Monitors cache usage during major updates
-        - Only updates viewport when necessary
-        - Uses efficient vectorized operations throughout
-        - Uses a try-except pattern to ensure graceful degradation
-        - Returns cached empty responses for error states
+#     Performance Considerations:
+#         - Monitors cache usage during major updates
+#         - Only updates viewport when necessary
+#         - Uses efficient vectorized operations throughout
+#         - Uses a try-except pattern to ensure graceful degradation
+#         - Returns cached empty responses for error states
     
-    Cross-Filtering Mechanism:
-        When a user clicks any visualization element, this callback:
-        1. Receives the selection via store components
-        2. Applies the selection as additional filters
-        3. Updates all visualizations to reflect the filtered view
-        4. Highlights the selected element across all applicable visualizations
+#     Cross-Filtering Mechanism:
+#         When a user clicks any visualization element, this callback:
+#         1. Receives the selection via store components
+#         2. Applies the selection as additional filters
+#         3. Updates all visualizations to reflect the filtered view
+#         4. Highlights the selected element across all applicable visualizations
     
-    This creates a unified visual query system where selections in any component
-    affect all other components, enabling powerful exploratory analysis.
-    """
-    try:
-        current_viewport = args[-1]
-        (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
-         selected_isced, selected_province, selected_feature, 
-         selected_credential, selected_institution, selected_cma) = args[:-1]
+#     This creates a unified visual query system where selections in any component
+#     affect all other components, enabling powerful exploratory analysis.
+#     """
+#     try:
+#         current_viewport = args[-1]
+#         (stem_bhase, years, provs, isced, credentials, institutions, cma_filter,
+#          selected_isced, selected_province, selected_feature, 
+#          selected_credential, selected_institution, selected_cma) = args[:-1]
         
-        ctx = callback_context
-        if not ctx.triggered:
-            raise PreventUpdate
+#         ctx = callback_context
+#         if not ctx.triggered:
+#             raise PreventUpdate
             
-        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+#         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
-        if triggered_id.startswith('{'):
-            try:
-                pattern_dict = json.loads(triggered_id.replace("'", "\""))
-                if pattern_dict.get('type') == 'store':
-                    triggered_id = f"selected-{pattern_dict.get('item')}"
-            except:
-                pass
+#         if triggered_id.startswith('{'):
+#             try:
+#                 pattern_dict = json.loads(triggered_id.replace("'", "\""))
+#                 if pattern_dict.get('type') == 'store':
+#                     triggered_id = f"selected-{pattern_dict.get('item')}"
+#             except:
+#                 pass
 
-        # Process data with optimized function
-        filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = data_utils.preprocess_data(
-            tuple(stem_bhase or []),
-            tuple(years or []),
-            tuple(provs or []),
-            tuple(isced or []),
-            tuple(credentials or []),
-            tuple(institutions or []),
-            tuple(cma_filter or [])  # Add CMA filter to preprocess_data
-        )
+#         # Process data with optimized function
+#         filtered_data, cma_grads, isced_grads, province_grads, credential_grads, institution_grads = data_utils.preprocess_data(
+#             tuple(stem_bhase or []),
+#             tuple(years or []),
+#             tuple(provs or []),
+#             tuple(isced or []),
+#             tuple(credentials or []),
+#             tuple(institutions or []),
+#             tuple(cma_filter or [])  # Add CMA filter to preprocess_data
+#         )
         
-        # Apply cross-filtering with vectorized operations
-        if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution, selected_cma]):
-            mask = pd.Series(True, index=filtered_data.index)
-            if selected_isced:
-                mask &= filtered_data['ISCED Level of Education'] == selected_isced
-            if selected_province:
-                mask &= filtered_data['Province or Territory'] == selected_province
-            if selected_feature:
-                mask &= filtered_data['DGUID'] == selected_feature
-            if selected_credential:
-                mask &= filtered_data['Credential Type'] == selected_credential
-            if selected_institution:
-                mask &= filtered_data['Institution'] == selected_institution
-            if selected_cma:
-                mask &= filtered_data['CMA/CSD'] == selected_cma
+#         # Apply cross-filtering with vectorized operations
+#         if any([selected_isced, selected_province, selected_feature, selected_credential, selected_institution, selected_cma]):
+#             mask = pd.Series(True, index=filtered_data.index)
+#             if selected_isced:
+#                 mask &= filtered_data['ISCED Level of Education'] == selected_isced
+#             if selected_province:
+#                 mask &= filtered_data['Province or Territory'] == selected_province
+#             if selected_feature:
+#                 mask &= filtered_data['DGUID'] == selected_feature
+#             if selected_credential:
+#                 mask &= filtered_data['Credential Type'] == selected_credential
+#             if selected_institution:
+#                 mask &= filtered_data['Institution'] == selected_institution
+#             if selected_cma:
+#                 mask &= filtered_data['CMA/CSD'] == selected_cma
 
-            filtered_data = filtered_data[mask]
-            if filtered_data.empty:
-                return create_empty_response()
+#             filtered_data = filtered_data[mask]
+#             if filtered_data.empty:
+#                 return create_empty_response()
 
-            # Aggregations with observed=True
-            cma_grads = filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
-            isced_grads = filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
-            province_grads = filtered_data.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
-            # Add aggregations for new charts
-            #cma_aggregation = filtered_data.groupby("CMA/CSD", observed=True)['Value'].sum().reset_index(name='graduates')
-            credential_grads = filtered_data.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
-            institution_grads = filtered_data.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
+#             # Aggregations with observed=True
+#             cma_grads = filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+#             isced_grads = filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
+#             province_grads = filtered_data.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
+#             # Add aggregations for new charts
+#             #cma_aggregation = filtered_data.groupby("CMA/CSD", observed=True)['Value'].sum().reset_index(name='graduates')
+#             credential_grads = filtered_data.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
+#             institution_grads = filtered_data.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
 
-        # Prepare map data efficiently
-        cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='left')
-        cma_data['graduates'] = cma_data['graduates'].fillna(0)
-        cma_data = cma_data[cma_data['graduates'] > 0]
+#         # Prepare map data efficiently
+#         cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='left')
+#         cma_data['graduates'] = cma_data['graduates'].fillna(0)
+#         cma_data = cma_data[cma_data['graduates'] > 0]
         
-        if cma_data.empty:
-            return create_empty_response()
+#         if cma_data.empty:
+#             return create_empty_response()
         
-        should_update_viewport = triggered_id in [
-            'stem-bhase-filter', 'year-filter', 'prov-filter',
-            'isced-filter', 'credential-filter', 'institution-filter',
-            'selected-feature', 'clear-selection', 'reset-filters'
-        ]
+#         should_update_viewport = triggered_id in [
+#             'stem-bhase-filter', 'year-filter', 'prov-filter',
+#             'isced-filter', 'credential-filter', 'institution-filter',
+#             'selected-feature', 'clear-selection', 'reset-filters'
+#         ]
         
-        if should_update_viewport:
-            bounds = cma_data.total_bounds
-            lat_padding = (bounds[3] - bounds[1]) * 0.1
-            lon_padding = (bounds[2] - bounds[0]) * 0.1
-            map_bounds = [
-                [bounds[1] - lat_padding, bounds[0] - lon_padding],
-                [bounds[3] + lat_padding, bounds[2] + lon_padding]
-            ]
-            viewport_output = dict(
-                bounds=map_bounds,
-                transition=dict(duration=1000)
-            )
-        else:
-            viewport_output = dash.no_update
+#         if should_update_viewport:
+#             bounds = cma_data.total_bounds
+#             lat_padding = (bounds[3] - bounds[1]) * 0.1
+#             lon_padding = (bounds[2] - bounds[0]) * 0.1
+#             map_bounds = [
+#                 [bounds[1] - lat_padding, bounds[0] - lon_padding],
+#                 [bounds[3] + lat_padding, bounds[2] + lon_padding]
+#             ]
+#             viewport_output = dict(
+#                 bounds=map_bounds,
+#                 transition=dict(duration=1000)
+#             )
+#         else:
+#             viewport_output = dash.no_update
             
-        # Create GeoJSON efficiently - updated to use built-in color scale
-        max_graduates = cma_data['graduates'].max()
-        min_graduates = cma_data['graduates'].min()
+#         # Create GeoJSON efficiently - updated to use built-in color scale
+#         max_graduates = cma_data['graduates'].max()
+#         min_graduates = cma_data['graduates'].min()
         
-        if max_graduates > min_graduates:
-            normalized_values = (cma_data['graduates'] - min_graduates) / (max_graduates - min_graduates)
-            colors = px.colors.sample_colorscale(COLOUR_SCALE, normalized_values)
-        else:
-            colors = [COLOUR_SCALE[-1]] * len(cma_data)
+#         if max_graduates > min_graduates:
+#             normalized_values = (cma_data['graduates'] - min_graduates) / (max_graduates - min_graduates)
+#             colors = px.colors.sample_colorscale(COLOUR_SCALE, normalized_values)
+#         else:
+#             colors = [COLOUR_SCALE[-1]] * len(cma_data)
         
-        features = [
-            {
-                'type': 'Feature',
-                'geometry': row.geometry.__geo_interface__,
-                'properties': {
-                    'graduates': int(row['graduates']),
-                    'DGUID': str(row['DGUID']),
-                    'CMA/CSD': row['CMA/CSD'],
-                    'style': {
-                        'fillColor': color if row['graduates'] > 0 else 'lightgray',
-                        'color': bc.IIC_BLACK if row['DGUID'] == selected_feature else bc.GREY,
-                        'weight': 2 if row['DGUID'] == selected_feature else 0.75,
-                        'fillOpacity': 0.8
-                    },
-                    'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(row['graduates']):,}</div>"
-                }
-            }
-            for (_, row), color in zip(cma_data.iterrows(), colors)
-        ]
+#         features = [
+#             {
+#                 'type': 'Feature',
+#                 'geometry': row.geometry.__geo_interface__,
+#                 'properties': {
+#                     'graduates': int(row['graduates']),
+#                     'DGUID': str(row['DGUID']),
+#                     'CMA/CSD': row['CMA/CSD'],
+#                     'style': {
+#                         'fillColor': color if row['graduates'] > 0 else 'lightgray',
+#                         'color': bc.IIC_BLACK if row['DGUID'] == selected_feature else bc.GREY,
+#                         'weight': 2 if row['DGUID'] == selected_feature else 0.75,
+#                         'fillOpacity': 0.8
+#                     },
+#                     'tooltip': f"<div style='font-family: Open Sans, sans-serif; font-weight: 600;'>{row['CMA/CSD']}: {int(row['graduates']):,}</div>"
+#                 }
+#             }
+#             for (_, row), color in zip(cma_data.iterrows(), colors)
+#         ]
         
-        geojson_data = {'type': 'FeatureCollection', 'features': features}
+#         geojson_data = {'type': 'FeatureCollection', 'features': features}
         
-        # Create charts with selections (simplified without chart type parameter)
-        fig_isced = data_utils.create_chart(
-            isced_grads, 
-            'ISCED Level of Education', 
-            'graduates',
-            'ISCED Level of Education', 
-            selected_isced
-        )
+#         # Create charts with selections (simplified without chart type parameter)
+#         fig_isced = data_utils.create_chart(
+#             isced_grads, 
+#             'ISCED Level of Education', 
+#             'graduates',
+#             'ISCED Level of Education', 
+#             selected_isced
+#         )
         
-        fig_province = data_utils.create_chart(
-            province_grads, 
-            'Province or Territory', 
-            'graduates',
-            'Province/Territory', 
-            selected_province
-        )
+#         fig_province = data_utils.create_chart(
+#             province_grads, 
+#             'Province or Territory', 
+#             'graduates',
+#             'Province/Territory', 
+#             selected_province
+#         )
 
-        # Create new charts
-        fig_cma = data_utils.create_chart(
-            cma_grads,
-            'CMA/CSD',
-            'graduates',
-            'Census Metropolitan Area',
-            selected_feature
-        )
+#         # Create new charts
+#         fig_cma = data_utils.create_chart(
+#             cma_grads,
+#             'CMA/CSD',
+#             'graduates',
+#             'Census Metropolitan Area',
+#             selected_feature
+#         )
 
-        fig_credential = data_utils.create_chart(
-            credential_grads,
-            'Credential Type',
-            'graduates',
-            'Credential Type',
-            selected_credential
-        )
+#         fig_credential = data_utils.create_chart(
+#             credential_grads,
+#             'Credential Type',
+#             'graduates',
+#             'Credential Type',
+#             selected_credential
+#         )
 
-        fig_institution = data_utils.create_chart(
-            institution_grads,
-            'Institution',
-            'graduates',
-            'Institution',
-            selected_institution
-        )
+#         fig_institution = data_utils.create_chart(
+#             institution_grads,
+#             'Institution',
+#             'graduates',
+#             'Institution',
+#             selected_institution
+#         )
         
-        # Monitor cache at the start of major updates
-        cache_utils.monitor_cache_usage()
+#         # Monitor cache at the start of major updates
+#         cache_utils.monitor_cache_usage()
         
-        return (
-            geojson_data,
-            fig_isced,
-            fig_province,
-            fig_cma,
-            fig_credential,
-            fig_institution,
-            viewport_output
-        )
+#         return (
+#             geojson_data,
+#             fig_isced,
+#             fig_province,
+#             fig_cma,
+#             fig_credential,
+#             fig_institution,
+#             viewport_output
+#         )
         
-    except Exception as e:
-        cache_utils.logger.error(f"Error in update_visualizations: {str(e)}")
-        return create_empty_response()
+#     except Exception as e:
+#         cache_utils.logger.error(f"Error in update_visualizations: {str(e)}")
+#         return create_empty_response()
 
 @app.callback(
     Output('stem-bhase-filter', 'value'),
@@ -1225,4 +1225,4 @@ def toggle_user_guide(open_clicks, close_clicks, is_open):
 import callbacks
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
