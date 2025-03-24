@@ -210,26 +210,26 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
 
     return geojson, fig_isced, fig_province, fig_cma, fig_credential, fig_institution, viewport
 
-# @app.callback(
-#     Output('stem-bhase-filter', 'value'),
-#     Output('year-filter', 'value'),
-#     Output('prov-filter', 'value'),
-#     Output('isced-filter', 'value'),
-#     Output('credential-filter', 'value'),
-#     Output('institution-filter', 'value'),
-#     Output('cma-filter', 'value'),
-#     Input('reset-filters', 'n_clicks'),
-#     prevent_initial_call=True
-# )
-# def reset_filters(n_clicks):
-#     """Reset all filters to their default (All) values."""
-#     if not n_clicks:
-#         raise PreventUpdate
-#     return (
-#         [opt['value'] for opt in data_utils.stem_bhase_options_full],
-#         [opt['value'] for opt in data_utils.year_options_full],
-#         [], [], [], [], []  # empty lists = "All" for multi-select filters
-#     )
+@dash.callback(
+    Output('stem-bhase-filter', 'value'),
+    Output('year-filter', 'value'),
+    Output('prov-filter', 'value'),
+    Output('isced-filter', 'value'),
+    Output('credential-filter', 'value'),
+    Output('institution-filter', 'value'),
+    Output('cma-filter', 'value'),
+    Input('reset-filters', 'n_clicks'),
+    prevent_initial_call=True
+)
+def reset_filters(n_clicks):
+    """Reset all filters to their default (All) values."""
+    if not n_clicks:
+        raise PreventUpdate
+    return (
+        [opt['value'] for opt in data_utils.stem_bhase_options_full],
+        [opt['value'] for opt in data_utils.year_options_full],
+        [], [], [], [], []  # empty lists = "All" for multi-select filters
+    )
 
 @dash.callback(
     Output('stem-bhase-filter', 'options'),

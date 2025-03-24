@@ -935,37 +935,37 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
 #         cache_utils.logger.error(f"Error in update_visualizations: {str(e)}")
 #         return create_empty_response()
 
-@app.callback(
-    Output('stem-bhase-filter', 'value'),
-    Output('year-filter', 'value'),
-    Output('prov-filter', 'value'),
-    Output('isced-filter', 'value'),
-    Output('credential-filter', 'value'),
-    Output('institution-filter', 'value'),
-    Output('cma-filter', 'value'),  # Add CMA filter output
-    Input('reset-filters', 'n_clicks'),
-    prevent_initial_call=True
-)
-def reset_filters(n_clicks):
-    """
-    Resets all data filters back to their default values. This clears any user-applied
-    restrictions, ensuring that the dataset and visualizations return to their initial
-    state.
+# @app.callback(
+#     Output('stem-bhase-filter', 'value'),
+#     Output('year-filter', 'value'),
+#     Output('prov-filter', 'value'),
+#     Output('isced-filter', 'value'),
+#     Output('credential-filter', 'value'),
+#     Output('institution-filter', 'value'),
+#     Output('cma-filter', 'value'),  # Add CMA filter output
+#     Input('reset-filters', 'n_clicks'),
+#     prevent_initial_call=True
+# )
+# def reset_filters(n_clicks):
+#     """
+#     Resets all data filters back to their default values. This clears any user-applied
+#     restrictions, ensuring that the dataset and visualizations return to their initial
+#     state.
 
-    Args:
-        n_clicks (int): The number of times the 'Reset Filters' button has been clicked.
+#     Args:
+#         n_clicks (int): The number of times the 'Reset Filters' button has been clicked.
 
-    Returns:
-        tuple: A tuple containing the default values for each filter component.
-    """
-    if not n_clicks:
-        raise PreventUpdate
+#     Returns:
+#         tuple: A tuple containing the default values for each filter component.
+#     """
+#     if not n_clicks:
+#         raise PreventUpdate
         
-    return (
-        [option['value'] for option in stem_bhase_options_full],
-        [option['value'] for option in year_options_full],
-        [], [], [], [], []  # Added empty list for CMA filter
-    )
+#     return (
+#         [option['value'] for option in stem_bhase_options_full],
+#         [option['value'] for option in year_options_full],
+#         [], [], [], [], []  # Added empty list for CMA filter
+#     )
 
 # @app.callback(
 #     Output('stem-bhase-filter', 'options'),
