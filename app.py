@@ -422,45 +422,18 @@ def load_spatial_data():
     
     return province_longlat_clean, combined_longlat_clean
 
-@cache_utils.azure_cache_decorator(ttl=3600)  # 1 hour cache
-def load_and_process_educational_data():
-    """
-    Loads preprocessed educational data from a pickle file. The data includes variables
-    such as STEM/BHASE classification, year, institution type, and associated graduate
-    counts. The result is cached to minimize repeated I/O operations.
-
-    Returns:
-        pandas.DataFrame: A DataFrame containing cleaned and processed educational data,
-                          ready for filtering and aggregation.
-    """
-    if NEW_DATA:
-        data = pd.read_pickle("data/cleaned_data.pkl")
-    else:
-        data = pd.read_pickle("data/cleaned_data - Backup.pkl")
-        data = data.rename(columns={'ISCED_level_of_education': 'ISCED Level of Education',
-                           'Credential_Type': 'Credential Type',
-                           'CIP_Name': 'CIP Name',
-                           'Province_Territory': 'Province or Territory',
-                           'year': 'Academic Year',
-                           'value': 'Value',
-                           'CMA_CA': 'CMA/CSD'})
-        
-    #data.to_excel('data.xlsx')
-    
-    categorical_cols = ["STEM/BHASE", "Academic Year", "Province or Territory", "ISCED Level of Education", "Credential Type", "Institution", "CMA/CSD", "DGUID"]
-    for col in categorical_cols:
-        data[col] = data[col].astype('category')
-    data['Value'] = data['Value'].astype('float32')
-
-    # Set a multi-index for direct indexing
-    data = data.set_index(["STEM/BHASE", "Academic Year", "Province or Territory", "ISCED Level of Education", "Credential Type", "Institution", "CMA/CSD", "DGUID"]).sort_index()
-
-    return data
-
 # Load initial data
 province_longlat_clean, combined_longlat_clean = load_spatial_data()
-data = load_and_process_educational_data()
-#data.to_csv('data.csv', index=False)
+data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_pickle)("data/cleaned_data.pkl")
+print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
+print("GeoDataFrame columns:", combined_longlat_clean.columns)
+
+# Ensure categorical types for filters:
+for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education","Credential Type","Institution","CMA/CSD","DGUID"]:
+    data[col] = data[col].astype('category')
+data['Value'] = data['Value'].astype('float32')
+data = data.set_index(["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education",
+                       "Credential Type","Institution","CMA/CSD","DGUID"]).sort_index()
 
 # Set up filter optimizer with loaded data
 data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
