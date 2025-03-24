@@ -462,41 +462,8 @@ province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
 #data.to_csv('data.csv', index=False)
 
-# (The FilterOptimizer class from original code, for optimized multi-index filtering)
-class FilterOptimizer:
-    def __init__(self, data):
-        self._data = data
-        self._cache = {}
-        self._index_cache = {}
-        self._last_hash = None
-    def _make_hash(self, filters):
-        return __import__('hashlib').md5(str(sorted(filters.items())).encode()).hexdigest()
-    def _get_index(self, col):
-        if col not in self._index_cache:
-            self._index_cache[col] = self._data.index.get_level_values(col)
-        return self._index_cache[col]
-    @data_utils.monitor_performance
-    def filter_data(self, filters: dict):
-        # Return cached if same filter combo
-        f_hash = self._make_hash(filters)
-        if f_hash == self._last_hash and f_hash in self._cache:
-            return self._cache[f_hash]
-        # Compute mask across multi-index levels
-        mask = pd.Series(True, index=self._data.index)
-        for col, values in filters.items():
-            if values:
-                idx = self._get_index(col)
-                mask &= idx.isin(values)
-        filtered = self._data[mask]
-        # Cache result and trim cache size
-        self._cache[f_hash] = filtered
-        self._last_hash = f_hash
-        if len(self._cache) > 10:
-            self._cache.pop(next(iter(self._cache)))
-        return filtered
-
-# Initialize the optimizer after loading data
-filter_optimizer = FilterOptimizer(data)
+# Set up filter optimizer with loaded data
+data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
 
 @cache_utils.azure_cache_decorator(ttl=300)
 @data_utils.monitor_performance
@@ -516,7 +483,7 @@ def preprocess_data(selected_stem_bhase, selected_years, selected_provs, selecte
     }
 
     # Use optimized filtering
-    filtered_data = filter_optimizer.filter_data(filters)
+    filtered_data = data_utils.filter_optimizer.filter_data(filters)
     if filtered_data.empty:
         return filtered_data.reset_index(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 

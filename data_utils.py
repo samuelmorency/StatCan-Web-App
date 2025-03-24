@@ -58,9 +58,13 @@ class FilterOptimizer:
 # These will be set in app.py after data is loaded
 filter_optimizer: FilterOptimizer = None
 # Option lists for filters (populated in app.py)
-stem_bhase_options_full = year_options_full = []
-prov_options_full = cma_options_full = []
-isced_options_full = credential_options_full = institution_options_full = []
+stem_bhase_options_full = []
+year_options_full = []
+prov_options_full = []
+cma_options_full = []
+isced_options_full = []
+credential_options_full = []
+institution_options_full = []
 
 @azure_cache_decorator(ttl=300)
 @monitor_performance
