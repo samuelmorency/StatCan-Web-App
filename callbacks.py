@@ -231,66 +231,131 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
 #         [], [], [], [], []  # empty lists = "All" for multi-select filters
 #     )
 
-# @app.callback(
-#     Output('stem-bhase-filter', 'options'),
-#     Output('year-filter', 'options'),
-#     Output('prov-filter', 'options'),
-#     Output('cma-filter', 'options'),
-#     Output('isced-filter', 'options'),
-#     Output('credential-filter', 'options'),
-#     Output('institution-filter', 'options'),
-#     Input('stem-bhase-filter', 'value'),
-#     Input('year-filter', 'value'),
-#     Input('prov-filter', 'value'),
-#     Input('isced-filter', 'value'),
-#     Input('credential-filter', 'value'),
-#     Input('institution-filter', 'value'),
-#     Input('cma-filter', 'value')
-# )
-# def update_filter_options(stem_vals, year_vals, prov_vals, isced_vals, cred_vals, inst_vals, cma_vals):
-#     """Update filter dropdown options based on the current selections (cascading filters)."""
-#     ctx = callback_context
-#     if not ctx.triggered:
-#         raise PreventUpdate
-#     current = {
-#         'STEM/BHASE': stem_vals or [],
-#         'Academic Year': year_vals or [],
-#         'Province or Territory': prov_vals or [],
-#         'CMA/CSD': cma_vals or [],
-#         'ISCED Level of Education': isced_vals or [],
-#         'Credential Type': cred_vals or [],
-#         'Institution': inst_vals or []
-#     }
-#     stem_options = data_utils.filter_options(data, 'STEM/BHASE', {k: v for k, v in current.items() if k != 'STEM/BHASE'})
-#     year_options = data_utils.filter_options(data, 'Academic Year', {k: v for k, v in current.items() if k != 'Academic Year'})
-#     prov_options = data_utils.filter_options(data, 'Province or Territory', {k: v for k, v in current.items() if k != 'Province or Territory'})
-#     cma_options = data_utils.filter_options(data, 'CMA/CSD', {k: v for k, v in current.items() if k != 'CMA/CSD'})
-#     isced_options = data_utils.filter_options(data, 'ISCED Level of Education', {k: v for k, v in current.items() if k != 'ISCED Level of Education'})
-#     cred_options = data_utils.filter_options(data, 'Credential Type', {k: v for k, v in current.items() if k != 'Credential Type'})
-#     inst_options = data_utils.filter_options(data, 'Institution', {k: v for k, v in current.items() if k != 'Institution'})
-#     return stem_options, year_options, prov_options, cma_options, isced_options, cred_options, inst_options
+@dash.callback(
+    Output('stem-bhase-filter', 'options'),
+    Output('year-filter', 'options'),
+    Output('prov-filter', 'options'),
+    Output('cma-filter', 'options'),
+    Output('isced-filter', 'options'),
+    Output('credential-filter', 'options'),
+    Output('institution-filter', 'options'),
+    Input('stem-bhase-filter', 'value'),
+    Input('year-filter', 'value'),
+    Input('prov-filter', 'value'),
+    Input('isced-filter', 'value'),
+    Input('credential-filter', 'value'),
+    Input('institution-filter', 'value'),
+    Input('cma-filter', 'value'),
+    # Chart selection stores
+    Input({'type': 'store', 'item': 'isced'}, 'data'),
+    Input({'type': 'store', 'item': 'province'}, 'data'),
+    Input('selected-feature', 'data'),
+    Input({'type': 'store', 'item': 'credential'}, 'data'),
+    Input({'type': 'store', 'item': 'institution'}, 'data'),
+    Input({'type': 'store', 'item': 'cma'}, 'data'),
+    Input('clear-selection', 'n_clicks')
+)
+def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas,
+                         selected_isced, selected_province, selected_feature,
+                         selected_credential, selected_institution, selected_cma,
+                         clear_clicks):
+    """
+    Updates filter options based on both dropdown selections and chart selections.
+    Works with MultiIndex data structure.
+    """
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    # Start with dropdown selections
+    updated_filters = {
+        'STEM/BHASE': set(stem_bhase or []),
+        'Academic Year': set(years or []),
+        'Province or Territory': set(provs or []),
+        'CMA/CSD': set(cmas or []),
+        'ISCED Level of Education': set(isced or []),
+        'Credential Type': set(credentials or []),
+        'Institution': set(institutions or [])
+    }
+    
+    # Add chart selections if they're not already in the corresponding filter
+    if selected_isced and selected_isced not in updated_filters['ISCED Level of Education']:
+        updated_filters['ISCED Level of Education'].add(selected_isced)
+    
+    if selected_province and selected_province not in updated_filters['Province or Territory']:
+        updated_filters['Province or Territory'].add(selected_province)
+    
+    if selected_credential and selected_credential not in updated_filters['Credential Type']:
+        updated_filters['Credential Type'].add(selected_credential)
+    
+    if selected_institution and selected_institution not in updated_filters['Institution']:
+        updated_filters['Institution'].add(selected_institution)
+    
+    if selected_cma and selected_cma not in updated_filters['CMA/CSD']:
+        updated_filters['CMA/CSD'].add(selected_cma)
+    
+    # Handle map feature selection
+    if selected_feature:
+        try:
+            feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
+            if feature_cma and feature_cma not in updated_filters['CMA/CSD']:
+                updated_filters['CMA/CSD'].add(feature_cma)
+        except (IndexError, KeyError):
+            pass  # Silently handle the case where feature_cma can't be found
+    
+    # Generate filter options by excluding the target dimension from filters
+    stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
+                                            {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
+    
+    year_options = data_utils.filter_options(data, 'Academic Year', 
+                                           {k: v for k, v in updated_filters.items() if k != 'Academic Year'})
+    
+    prov_options = data_utils.filter_options(data, 'Province or Territory', 
+                                           {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
+    
+    cma_options = data_utils.filter_options(data, 'CMA/CSD', 
+                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CSD'})
+    
+    isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
+                                            {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
+    
+    cred_options = data_utils.filter_options(data, 'Credential Type', 
+                                          {k: v for k, v in updated_filters.items() if k != 'Credential Type'})
+    
+    inst_options = data_utils.filter_options(data, 'Institution', 
+                                          {k: v for k, v in updated_filters.items() if k != 'Institution'})
+    
+    return (
+        stem_options,
+        year_options,
+        prov_options,
+        cma_options,
+        isced_options,
+        cred_options,
+        inst_options
+    )
 
-# @app.callback(
-#     Output("download-data", "data"),
-#     Input("download-button", "n_clicks"),
-#     State("pivot-table", "data"),
-#     State("pivot-table", "cols"),
-#     State("pivot-table", "rows"),
-#     State("pivot-table", "vals"),
-#     prevent_initial_call=True,
-# )
-# def download_pivot_data(n_clicks, records, cols, rows, vals):
-#     """Generate a CSV download of the current pivot table view."""
-#     if not n_clicks or records is None:
-#         raise PreventUpdate
-#     try:
-#         df = pd.DataFrame(records)
-#         pivot_df = df.pivot_table(index=rows or None, columns=cols or None, values=vals, aggfunc='sum', fill_value=0)
-#         csv_string = pivot_df.to_csv(index=True)
-#         return dcc.send_string(csv_string, filename=f"graduates_pivot_{__import__('time').strftime('%Y%m%d_%H%M%S')}.csv")
-#     except Exception as e:
-#         cache_utils.logger.error(f"Error generating pivot CSV: {e}")
-#         raise PreventUpdate
+@dash.callback(
+    Output("download-data", "data"),
+    Input("download-button", "n_clicks"),
+    State("pivot-table", "data"),
+    State("pivot-table", "cols"),
+    State("pivot-table", "rows"),
+    State("pivot-table", "vals"),
+    prevent_initial_call=True,
+)
+def download_pivot_data(n_clicks, records, cols, rows, vals):
+    """Generate a CSV download of the current pivot table view."""
+    if not n_clicks or records is None:
+        raise PreventUpdate
+    try:
+        df = pd.DataFrame(records)
+        pivot_df = df.pivot_table(index=rows or None, columns=cols or None, values=vals, aggfunc='sum', fill_value=0)
+        csv_string = pivot_df.to_csv(index=True)
+        return dcc.send_string(csv_string, filename=f"graduates_pivot_{__import__('time').strftime('%Y%m%d_%H%M%S')}.csv")
+    except Exception as e:
+        cache_utils.logger.error(f"Error generating pivot CSV: {e}")
+        raise PreventUpdate
 
 # Callbacks for toggling UI elements (nav collapse, modals) remain largely unchanged:
 @dash.callback(
@@ -308,24 +373,24 @@ dash.callback(Output("navbar-collapse", "is_open"),
              Input("navbar-toggler", "n_clicks"),
              State("navbar-collapse", "is_open"))(toggle_navbar_collapse)
 
-# @app.callback(
-#     Output("user-guide-modal", "is_open"),
-#     Output("user-guide-content", "children"),
-#     Input("open-guide-button", "n_clicks"),
-#     Input("close-guide-button", "n_clicks"),
-#     State("user-guide-modal", "is_open")
-# )
-# def toggle_user_guide(open_clicks, close_clicks, is_open):
-#     if not (open_clicks or close_clicks):
-#         raise PreventUpdate
-#     if (open_clicks or close_clicks) and not is_open:
-#         # Load guide content on open
-#         try:
-#             guide_md = Path("user_guide.md").read_text(encoding="utf-8")
-#         except Exception:
-#             guide_md = "User guide not available."
-#         return True, dcc.Markdown(guide_md)
-#     return False if is_open else is_open, no_update
+@dash.callback(
+    Output("user-guide-modal", "is_open"),
+    Output("user-guide-content", "children"),
+    Input("open-guide-button", "n_clicks"),
+    Input("close-guide-button", "n_clicks"),
+    State("user-guide-modal", "is_open")
+)
+def toggle_user_guide(open_clicks, close_clicks, is_open):
+    if not (open_clicks or close_clicks):
+        raise PreventUpdate
+    if (open_clicks or close_clicks) and not is_open:
+        # Load guide content on open
+        try:
+            guide_md = Path("user_guide.md").read_text(encoding="utf-8")
+        except Exception:
+            guide_md = "User guide not available."
+        return True, dcc.Markdown(guide_md)
+    return False if is_open else is_open, no_update
 
 @dash.callback(
     Output("faq-modal", "is_open"),

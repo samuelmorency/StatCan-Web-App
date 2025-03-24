@@ -967,185 +967,185 @@ def reset_filters(n_clicks):
         [], [], [], [], []  # Added empty list for CMA filter
     )
 
-@app.callback(
-    Output('stem-bhase-filter', 'options'),
-    Output('year-filter', 'options'),
-    Output('prov-filter', 'options'),
-    Output('cma-filter', 'options'),
-    Output('isced-filter', 'options'),
-    Output('credential-filter', 'options'),
-    Output('institution-filter', 'options'),
-    Input('stem-bhase-filter', 'value'),
-    Input('year-filter', 'value'),
-    Input('prov-filter', 'value'),
-    Input('isced-filter', 'value'),
-    Input('credential-filter', 'value'),
-    Input('institution-filter', 'value'),
-    Input('cma-filter', 'value'),
-    # Chart selection stores
-    Input({'type': 'store', 'item': 'isced'}, 'data'),
-    Input({'type': 'store', 'item': 'province'}, 'data'),
-    Input('selected-feature', 'data'),
-    Input({'type': 'store', 'item': 'credential'}, 'data'),
-    Input({'type': 'store', 'item': 'institution'}, 'data'),
-    Input({'type': 'store', 'item': 'cma'}, 'data'),
-    Input('clear-selection', 'n_clicks')
-)
-def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas,
-                         selected_isced, selected_province, selected_feature,
-                         selected_credential, selected_institution, selected_cma,
-                         clear_clicks):
-    """
-    Updates filter options based on both dropdown selections and chart selections.
-    Works with MultiIndex data structure.
-    """
-    ctx = callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
+# @app.callback(
+#     Output('stem-bhase-filter', 'options'),
+#     Output('year-filter', 'options'),
+#     Output('prov-filter', 'options'),
+#     Output('cma-filter', 'options'),
+#     Output('isced-filter', 'options'),
+#     Output('credential-filter', 'options'),
+#     Output('institution-filter', 'options'),
+#     Input('stem-bhase-filter', 'value'),
+#     Input('year-filter', 'value'),
+#     Input('prov-filter', 'value'),
+#     Input('isced-filter', 'value'),
+#     Input('credential-filter', 'value'),
+#     Input('institution-filter', 'value'),
+#     Input('cma-filter', 'value'),
+#     # Chart selection stores
+#     Input({'type': 'store', 'item': 'isced'}, 'data'),
+#     Input({'type': 'store', 'item': 'province'}, 'data'),
+#     Input('selected-feature', 'data'),
+#     Input({'type': 'store', 'item': 'credential'}, 'data'),
+#     Input({'type': 'store', 'item': 'institution'}, 'data'),
+#     Input({'type': 'store', 'item': 'cma'}, 'data'),
+#     Input('clear-selection', 'n_clicks')
+# )
+# def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas,
+#                          selected_isced, selected_province, selected_feature,
+#                          selected_credential, selected_institution, selected_cma,
+#                          clear_clicks):
+#     """
+#     Updates filter options based on both dropdown selections and chart selections.
+#     Works with MultiIndex data structure.
+#     """
+#     ctx = callback_context
+#     if not ctx.triggered:
+#         raise PreventUpdate
     
-    # Start with dropdown selections
-    updated_filters = {
-        'STEM/BHASE': set(stem_bhase or []),
-        'Academic Year': set(years or []),
-        'Province or Territory': set(provs or []),
-        'CMA/CSD': set(cmas or []),
-        'ISCED Level of Education': set(isced or []),
-        'Credential Type': set(credentials or []),
-        'Institution': set(institutions or [])
-    }
+#     # Start with dropdown selections
+#     updated_filters = {
+#         'STEM/BHASE': set(stem_bhase or []),
+#         'Academic Year': set(years or []),
+#         'Province or Territory': set(provs or []),
+#         'CMA/CSD': set(cmas or []),
+#         'ISCED Level of Education': set(isced or []),
+#         'Credential Type': set(credentials or []),
+#         'Institution': set(institutions or [])
+#     }
     
-    # Add chart selections if they're not already in the corresponding filter
-    if selected_isced and selected_isced not in updated_filters['ISCED Level of Education']:
-        updated_filters['ISCED Level of Education'].add(selected_isced)
+#     # Add chart selections if they're not already in the corresponding filter
+#     if selected_isced and selected_isced not in updated_filters['ISCED Level of Education']:
+#         updated_filters['ISCED Level of Education'].add(selected_isced)
     
-    if selected_province and selected_province not in updated_filters['Province or Territory']:
-        updated_filters['Province or Territory'].add(selected_province)
+#     if selected_province and selected_province not in updated_filters['Province or Territory']:
+#         updated_filters['Province or Territory'].add(selected_province)
     
-    if selected_credential and selected_credential not in updated_filters['Credential Type']:
-        updated_filters['Credential Type'].add(selected_credential)
+#     if selected_credential and selected_credential not in updated_filters['Credential Type']:
+#         updated_filters['Credential Type'].add(selected_credential)
     
-    if selected_institution and selected_institution not in updated_filters['Institution']:
-        updated_filters['Institution'].add(selected_institution)
+#     if selected_institution and selected_institution not in updated_filters['Institution']:
+#         updated_filters['Institution'].add(selected_institution)
     
-    if selected_cma and selected_cma not in updated_filters['CMA/CSD']:
-        updated_filters['CMA/CSD'].add(selected_cma)
+#     if selected_cma and selected_cma not in updated_filters['CMA/CSD']:
+#         updated_filters['CMA/CSD'].add(selected_cma)
     
-    # Handle map feature selection
-    if selected_feature:
-        try:
-            feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
-            if feature_cma and feature_cma not in updated_filters['CMA/CSD']:
-                updated_filters['CMA/CSD'].add(feature_cma)
-        except (IndexError, KeyError):
-            pass  # Silently handle the case where feature_cma can't be found
+#     # Handle map feature selection
+#     if selected_feature:
+#         try:
+#             feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
+#             if feature_cma and feature_cma not in updated_filters['CMA/CSD']:
+#                 updated_filters['CMA/CSD'].add(feature_cma)
+#         except (IndexError, KeyError):
+#             pass  # Silently handle the case where feature_cma can't be found
     
-    # Generate filter options by excluding the target dimension from filters
-    stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
-                                            {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
+#     # Generate filter options by excluding the target dimension from filters
+#     stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
+#                                             {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
     
-    year_options = data_utils.filter_options(data, 'Academic Year', 
-                                           {k: v for k, v in updated_filters.items() if k != 'Academic Year'})
+#     year_options = data_utils.filter_options(data, 'Academic Year', 
+#                                            {k: v for k, v in updated_filters.items() if k != 'Academic Year'})
     
-    prov_options = data_utils.filter_options(data, 'Province or Territory', 
-                                           {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
+#     prov_options = data_utils.filter_options(data, 'Province or Territory', 
+#                                            {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
     
-    cma_options = data_utils.filter_options(data, 'CMA/CSD', 
-                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CSD'})
+#     cma_options = data_utils.filter_options(data, 'CMA/CSD', 
+#                                           {k: v for k, v in updated_filters.items() if k != 'CMA/CSD'})
     
-    isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
-                                            {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
+#     isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
+#                                             {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
     
-    cred_options = data_utils.filter_options(data, 'Credential Type', 
-                                          {k: v for k, v in updated_filters.items() if k != 'Credential Type'})
+#     cred_options = data_utils.filter_options(data, 'Credential Type', 
+#                                           {k: v for k, v in updated_filters.items() if k != 'Credential Type'})
     
-    inst_options = data_utils.filter_options(data, 'Institution', 
-                                          {k: v for k, v in updated_filters.items() if k != 'Institution'})
+#     inst_options = data_utils.filter_options(data, 'Institution', 
+#                                           {k: v for k, v in updated_filters.items() if k != 'Institution'})
     
-    return (
-        stem_options,
-        year_options,
-        prov_options,
-        cma_options,
-        isced_options,
-        cred_options,
-        inst_options
-    )
+#     return (
+#         stem_options,
+#         year_options,
+#         prov_options,
+#         cma_options,
+#         isced_options,
+#         cred_options,
+#         inst_options
+#     )
 
-@app.callback(
-    Output("download-data", "data"),
-    Input("download-button", "n_clicks"),
-    State("pivot-table", "data"),
-    State("pivot-table", "cols"),
-    State("pivot-table", "rows"),
-    State("pivot-table", "vals"),
-    prevent_initial_call=True,
-)
-def download_pivot_data(n_clicks, data, cols, rows, vals):
-    """
-    Creates a downloadable CSV file from the pivot table's current configuration.
+# @app.callback(
+#     Output("download-data", "data"),
+#     Input("download-button", "n_clicks"),
+#     State("pivot-table", "data"),
+#     State("pivot-table", "cols"),
+#     State("pivot-table", "rows"),
+#     State("pivot-table", "vals"),
+#     prevent_initial_call=True,
+# )
+# def download_pivot_data(n_clicks, data, cols, rows, vals):
+#     """
+#     Creates a downloadable CSV file from the pivot table's current configuration.
     
-    Args:
-        n_clicks (int): Number of times download button clicked
-        data (list): The raw data from the pivot table
-        cols (list): Column headers configured in the pivot table
-        rows (list): Row headers configured in the pivot table
-        vals (list): Value fields configured in the pivot table
+#     Args:
+#         n_clicks (int): Number of times download button clicked
+#         data (list): The raw data from the pivot table
+#         cols (list): Column headers configured in the pivot table
+#         rows (list): Row headers configured in the pivot table
+#         vals (list): Value fields configured in the pivot table
         
-    Returns:
-        dict: Download specification for Dash
-    """
-    if not n_clicks or not data:
-        raise PreventUpdate
+#     Returns:
+#         dict: Download specification for Dash
+#     """
+#     if not n_clicks or not data:
+#         raise PreventUpdate
 
-    try:
-        # Create a pandas DataFrame from the pivot table data
-        df = pd.DataFrame(data)
+#     try:
+#         # Create a pandas DataFrame from the pivot table data
+#         df = pd.DataFrame(data)
         
-        # Get unique values for rows and columns
-        row_values = []
-        for row in rows:
-            if row in df.columns:
-                row_values.append(sorted(df[row].unique()))
+#         # Get unique values for rows and columns
+#         row_values = []
+#         for row in rows:
+#             if row in df.columns:
+#                 row_values.append(sorted(df[row].unique()))
                 
-        col_values = []
-        for col in cols:
-            if col in df.columns:
-                col_values.append(sorted(df[col].unique()))
+#         col_values = []
+#         for col in cols:
+#             if col in df.columns:
+#                 col_values.append(sorted(df[col].unique()))
                 
-        # Create MultiIndex for rows and columns
-        if row_values:
-            row_index = pd.MultiIndex.from_product(row_values, names=rows)
-        else:
-            row_index = pd.Index([])
+#         # Create MultiIndex for rows and columns
+#         if row_values:
+#             row_index = pd.MultiIndex.from_product(row_values, names=rows)
+#         else:
+#             row_index = pd.Index([])
             
-        if col_values:
-            col_index = pd.MultiIndex.from_product(col_values, names=cols)
-        else:
-            col_index = pd.Index([])
+#         if col_values:
+#             col_index = pd.MultiIndex.from_product(col_values, names=cols)
+#         else:
+#             col_index = pd.Index([])
             
-        # Create pivot table
-        pivot_df = df.pivot_table(
-            index=rows if rows else None,
-            columns=cols if cols else None,
-            values=vals,
-            aggfunc='sum',
-            fill_value=0
-        )
+#         # Create pivot table
+#         pivot_df = df.pivot_table(
+#             index=rows if rows else None,
+#             columns=cols if cols else None,
+#             values=vals,
+#             aggfunc='sum',
+#             fill_value=0
+#         )
         
-        # Convert to string buffer
-        string_buffer = io.StringIO()
-        pivot_df.to_csv(string_buffer)
+#         # Convert to string buffer
+#         string_buffer = io.StringIO()
+#         pivot_df.to_csv(string_buffer)
         
-        return dict(
-            content=string_buffer.getvalue(),
-            filename=f"graduates_pivot_{time.strftime('%Y%m%d_%H%M%S')}.csv",
-            type="text/csv",
-            base64=False
-        )
+#         return dict(
+#             content=string_buffer.getvalue(),
+#             filename=f"graduates_pivot_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+#             type="text/csv",
+#             base64=False
+#         )
         
-    except Exception as e:
-        cache_utils.logger.error(f"Error in download_pivot_data: {str(e)}")
-        raise PreventUpdate
+#     except Exception as e:
+#         cache_utils.logger.error(f"Error in download_pivot_data: {str(e)}")
+#         raise PreventUpdate
 
 # @app.callback(
 #     Output("horizontal-collapse", "is_open"),
@@ -1188,39 +1188,39 @@ app.clientside_callback(
     Input("map", "id")
 )
 
-def load_user_guide():
-    """Load user guide markdown"""
-    user_guide_path = Path("user_guide.md")
-    if (user_guide_path.exists()):
-        with open(user_guide_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            return dcc.Markdown(content)
-    return "User guide not available"
+# def load_user_guide():
+#     """Load user guide markdown"""
+#     user_guide_path = Path("user_guide.md")
+#     if (user_guide_path.exists()):
+#         with open(user_guide_path, "r", encoding="utf-8") as f:
+#             content = f.read()
+#             return dcc.Markdown(content)
+#     return "User guide not available"
 
-@app.callback(
-    Output("user-guide-modal", "is_open"),
-    Output("user-guide-content", "children"),
-    [
-        Input("open-guide-button", "n_clicks"),
-        Input("close-guide-button", "n_clicks")
-    ],
-    State("user-guide-modal", "is_open"),
-)
-def toggle_user_guide(open_clicks, close_clicks, is_open):
-    """Toggle user guide modal and load content"""
-    if not any(clicks for clicks in [open_clicks, close_clicks]):
-        raise PreventUpdate
+# @app.callback(
+#     Output("user-guide-modal", "is_open"),
+#     Output("user-guide-content", "children"),
+#     [
+#         Input("open-guide-button", "n_clicks"),
+#         Input("close-guide-button", "n_clicks")
+#     ],
+#     State("user-guide-modal", "is_open"),
+# )
+# def toggle_user_guide(open_clicks, close_clicks, is_open):
+#     """Toggle user guide modal and load content"""
+#     if not any(clicks for clicks in [open_clicks, close_clicks]):
+#         raise PreventUpdate
         
-    if open_clicks or close_clicks:
-        if not is_open:
-            # Only load content when opening
-            return not is_open, html.Div(
-                #dangerously_allow_html=True,
-                children=load_user_guide()
-            )
-        return not is_open, dash.no_update
+#     if open_clicks or close_clicks:
+#         if not is_open:
+#             # Only load content when opening
+#             return not is_open, html.Div(
+#                 #dangerously_allow_html=True,
+#                 children=load_user_guide()
+#             )
+#         return not is_open, dash.no_update
         
-    return is_open, dash.no_update
+#     return is_open, dash.no_update
 
 import callbacks
 
