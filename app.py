@@ -61,8 +61,8 @@ combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(lambda: gpd
     "data/combined_longlat_simplified.parquet" if SIMPLIFIED_SF == True else "data/combined_longlat_clean.parquet"
 ))()
 data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_pickle)("data/cleaned_data.pkl")
-print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
-print("GeoDataFrame columns:", combined_longlat_clean.columns)
+#print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
+#print("GeoDataFrame columns:", combined_longlat_clean.columns)
 
 # Ensure categorical types for filters:
 for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education","Credential Type","Institution","CMA/CSD","DGUID"]:
@@ -100,24 +100,7 @@ app.layout = html.Div([
     create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
 ])
 
-# app.clientside_callback(
-#     """
-#     function set_event(map_id) {
-#         // On resize event 
-#         var callback = function() {
-#             window.dispatchEvent(new Event('resize'));
-#         }
-
-#         new ResizeObserver(callback).observe(document.getElementById(map_id))
-
-#         return dash_clientside.no_update;
-#     }
-#     """,
-#     Output("map", "id"),
-#     Input("map", "id")
-# )
-
 import callbacks
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)

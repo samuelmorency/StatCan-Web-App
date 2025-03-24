@@ -92,12 +92,12 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
         # Return empty dataframes for each aggregation if nothing passes the filters
         empty_df = pd.DataFrame()
         return (filtered_data.reset_index(), empty_df, empty_df, empty_df, empty_df, empty_df)
-    logger.info(f"filtered_data shape: {filtered_data.shape}")
-    logger.info(f"filtered_data sample:\n{filtered_data.head()}")
+    #logger.info(f"filtered_data shape: {filtered_data.shape}")
+    #logger.info(f"filtered_data sample:\n{filtered_data.head()}")
     # Aggregate graduate counts by various dimensions
     cma_grads = filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
-    logger.info(f"cma_grads shape: {cma_grads.shape}")
-    logger.info(f"cma_grads sample:\n{cma_grads.head()}")
+    #logger.info(f"cma_grads shape: {cma_grads.shape}")
+    #logger.info(f"cma_grads sample:\n{cma_grads.head()}")
     isced_grads = filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
     province_grads = filtered_data.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
     credential_grads = filtered_data.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')

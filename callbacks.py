@@ -403,6 +403,23 @@ def toggle_faq(open_clicks, close_clicks, is_open):
         raise PreventUpdate
     return (not is_open) if (open_clicks or close_clicks) else is_open
 
+dash.clientside_callback(
+    """
+    function set_event(map_id) {
+        // On resize event 
+        var callback = function() {
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        new ResizeObserver(callback).observe(document.getElementById(map_id))
+
+        return dash_clientside.no_update;
+    }
+    """,
+    Output("map", "id"),
+    Input("map", "id")
+)
+
 def create_empty_response():
     """Produce empty outputs (geojson, 5 figs, viewport) for no-data cases."""
     empty_geojson = {'type': 'FeatureCollection', 'features': []}
