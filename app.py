@@ -628,42 +628,6 @@ def calculate_viewport_update(triggered_id, cma_data, selected_feature=None):
     
     return None
 
-# Optimized callback for map selection
-@app.callback(
-    Output('selected-feature', 'data'),
-    Input('cma-geojson', 'clickData'),
-    Input('clear-selection', 'n_clicks'),
-    State('selected-feature', 'data'),
-    prevent_initial_call=True
-)
-def update_selected_feature(click_data, n_clicks, stored_cma):
-    """
-    Updates the currently selected CMA/CSD feature when the map is clicked. If the
-    'Clear Selection' button is clicked, resets the selection. This ensures that
-    the selected feature state remains synchronized with user actions on the map.
-
-    Args:
-        click_data (dict or None): Data associated with a map feature click.
-        n_clicks (int): The number of times the 'Clear Selection' button was clicked.
-        stored_cma (str or None): The currently stored CMA/CSD DGUID.
-
-    Returns:
-        str or None: The updated selected CMA/CSD DGUID or None if the selection is cleared.
-    """
-    ctx_manager = CallbackContextManager(callback_context)
-    
-    if not ctx_manager.is_triggered:
-        raise PreventUpdate
-        
-    if ctx_manager.triggered_id == 'clear-selection':
-        return None
-        
-    if ctx_manager.triggered_id == 'cma-geojson' and click_data and 'points' in click_data:
-        clicked_id = click_data['points'][0]['featureId']
-        return None if stored_cma == clicked_id else clicked_id
-        
-    return stored_cma
-
 @app.callback(
     Output({'type': 'store', 'item': MATCH}, 'data'),
     Input({'type': 'graph', 'item': MATCH}, 'clickData'),
@@ -1310,6 +1274,8 @@ def toggle_faq(open_clicks, close_clicks, is_open):
         return not is_open
         
     return is_open
+
+import callbacks
 
 if __name__ == '__main__':
     app.run_server(debug=False)
