@@ -462,79 +462,38 @@ province_longlat_clean, combined_longlat_clean = load_spatial_data()
 data = load_and_process_educational_data()
 #data.to_csv('data.csv', index=False)
 
+# (The FilterOptimizer class from original code, for optimized multi-index filtering)
 class FilterOptimizer:
-    """
-    Optimizes filtering operations on DataFrames with cached results and vectorized operations.
-    
-    This class provides efficient filtering of DataFrame data by implementing:
-    1. Hash-based caching of filter results
-    2. Vectorized operations for maximum performance
-    3. Pre-computed indexes for frequent filtering dimensions
-    
-    Attributes:
-        _data (pd.DataFrame): The source DataFrame with multi-level index.
-        _cache (dict): Cache mapping filter hash strings to filtered DataFrames.
-        _index_cache (dict): Cache of column-specific index values for faster filtering.
-        _last_filter_hash (str): Hash of the last filter configuration applied.
-    
-    Methods:
-        _create_filter_hash(filters): Creates a unique hash for filter configurations.
-        _create_index(column): Creates and caches an index for a specific column.
-        filter_data(filters): Performs optimized filtering with caching.
-    
-    When filter_data() is called:
-    1. A hash is generated from the filter configuration
-    2. If the hash exists in cache, the cached result is returned
-    3. Otherwise, a vectorized filtering operation is performed
-    4. The result is cached before returning
-    
-    The cache is limited to 10 most recent filter configurations to prevent memory growth.
-    """
     def __init__(self, data):
         self._data = data
         self._cache = {}
         self._index_cache = {}
-        self._last_filter_hash = None
-        
-    def _create_filter_hash(self, filters):
-        """Create a unique hash for the current filter combination"""
-        return hashlib.md5(str(sorted(filters.items())).encode()).hexdigest()
-    
-    def _create_index(self, column):
-        """Create and cache index for faster filtering"""
-        if column not in self._index_cache:
-            self._index_cache[column] = self._data.index.get_level_values(column)
-        return self._index_cache[column]
-    
+        self._last_hash = None
+    def _make_hash(self, filters):
+        return __import__('hashlib').md5(str(sorted(filters.items())).encode()).hexdigest()
+    def _get_index(self, col):
+        if col not in self._index_cache:
+            self._index_cache[col] = self._data.index.get_level_values(col)
+        return self._index_cache[col]
     @data_utils.monitor_performance
-    def filter_data(self, filters):
-        """Optimized filtering with caching and vectorized operations"""
-        filter_hash = self._create_filter_hash(filters)
-        
-        # Return cached result if available
-        if filter_hash == self._last_filter_hash and filter_hash in self._cache:
-            return self._cache[filter_hash]
-            
-        # Create initial mask
+    def filter_data(self, filters: dict):
+        # Return cached if same filter combo
+        f_hash = self._make_hash(filters)
+        if f_hash == self._last_hash and f_hash in self._cache:
+            return self._cache[f_hash]
+        # Compute mask across multi-index levels
         mask = pd.Series(True, index=self._data.index)
-        
-        # Apply filters using vectorized operations
         for col, values in filters.items():
             if values:
-                idx = self._create_index(col)
+                idx = self._get_index(col)
                 mask &= idx.isin(values)
-        
-        # Cache and return result
-        filtered_data = self._data[mask]
-        self._cache[filter_hash] = filtered_data
-        self._last_filter_hash = filter_hash
-        
-        # Limit cache size
+        filtered = self._data[mask]
+        # Cache result and trim cache size
+        self._cache[f_hash] = filtered
+        self._last_hash = f_hash
         if len(self._cache) > 10:
-            oldest_key = next(iter(self._cache))
-            del self._cache[oldest_key]
-            
-        return filtered_data
+            self._cache.pop(next(iter(self._cache)))
+        return filtered
 
 # Initialize the optimizer after loading data
 filter_optimizer = FilterOptimizer(data)
