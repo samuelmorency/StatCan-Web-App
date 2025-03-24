@@ -136,6 +136,8 @@ def create_chart(df, x_column, y_column, x_label, selected_value=None):
         plot_bgcolor='#D5DADC', paper_bgcolor='white',
         margin=dict(l=5, r=50, t=25, b=5),
         height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area'] else CHART_HEIGHT,
+        # Add space after tick labels
+        yaxis=dict(ticksuffix=' '),
         # Remove unnecessary modebar buttons:
         modebar_remove=['zoom','pan','select','zoomIn','zoomOut','autoScale','resetScale','lasso2d']
     )
