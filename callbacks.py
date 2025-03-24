@@ -292,21 +292,21 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
 #         cache_utils.logger.error(f"Error generating pivot CSV: {e}")
 #         raise PreventUpdate
 
-# # Callbacks for toggling UI elements (nav collapse, modals) remain largely unchanged:
-# @app.callback(
-#     Output("horizontal-collapse", "is_open"),
-#     Input("horizontal-collapse-button", "n_clicks"),
-#     State("horizontal-collapse", "is_open")
-# )
-# def toggle_collapse(n, is_open):
-#     return not is_open if n else is_open
+# Callbacks for toggling UI elements (nav collapse, modals) remain largely unchanged:
+@dash.callback(
+    Output("horizontal-collapse", "is_open"),
+    Input("horizontal-collapse-button", "n_clicks"),
+    State("horizontal-collapse", "is_open")
+)
+def toggle_collapse(n, is_open):
+    return not is_open if n else is_open
 
-# def toggle_navbar_collapse(n, is_open):
-#     return not is_open if n else is_open
+def toggle_navbar_collapse(n, is_open):
+    return not is_open if n else is_open
 
-# app.callback(Output("navbar-collapse", "is_open"),
-#              Input("navbar-toggler", "n_clicks"),
-#              State("navbar-collapse", "is_open"))(toggle_navbar_collapse)
+dash.callback(Output("navbar-collapse", "is_open"),
+             Input("navbar-toggler", "n_clicks"),
+             State("navbar-collapse", "is_open"))(toggle_navbar_collapse)
 
 # @app.callback(
 #     Output("user-guide-modal", "is_open"),
