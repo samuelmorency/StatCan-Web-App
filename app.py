@@ -414,6 +414,22 @@ data = data.set_index(["STEM/BHASE","Academic Year","Province or Territory","ISC
 
 # Set up filter optimizer with loaded data
 data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
+# Compute full filter option lists for initial layout
+stem_bhase_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('STEM/BHASE').unique())]
+year_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Academic Year').unique())]
+prov_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Province or Territory').unique())]
+cma_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('CMA/CSD').unique())]
+isced_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('ISCED Level of Education').unique())]
+credential_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Credential Type').unique())]
+institution_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Institution').unique())]
+# Save options in data_utils (for use in reset_filters callback)
+data_utils.stem_bhase_options_full = stem_bhase_options_full
+data_utils.year_options_full = year_options_full
+data_utils.prov_options_full = prov_options_full
+data_utils.cma_options_full = cma_options_full
+data_utils.isced_options_full = isced_options_full
+data_utils.credential_options_full = credential_options_full
+data_utils.institution_options_full = institution_options_full
 
 @cache_utils.azure_cache_decorator(ttl=300)
 @data_utils.monitor_performance
@@ -728,25 +744,6 @@ def update_selected_value(click_data, n_clicks, stored_value, triggered_id, clea
         return None if stored_value == clicked_value else clicked_value
 
     return stored_value
-
-# Set up filter optimizer with loaded data
-data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
-# Compute full filter option lists for initial layout
-stem_bhase_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('STEM/BHASE').unique())]
-year_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Academic Year').unique())]
-prov_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Province or Territory').unique())]
-cma_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('CMA/CSD').unique())]
-isced_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('ISCED Level of Education').unique())]
-credential_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Credential Type').unique())]
-institution_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Institution').unique())]
-# Save options in data_utils (for use in reset_filters callback)
-data_utils.stem_bhase_options_full = stem_bhase_options_full
-data_utils.year_options_full = year_options_full
-data_utils.prov_options_full = prov_options_full
-data_utils.cma_options_full = cma_options_full
-data_utils.isced_options_full = isced_options_full
-data_utils.credential_options_full = credential_options_full
-data_utils.institution_options_full = institution_options_full
 
 # Extract and write values only from option dictionaries
 #def write_values_to_file(options, filename):
