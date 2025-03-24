@@ -1036,27 +1036,6 @@ def reset_filters(n_clicks):
         [], [], [], [], []  # Added empty list for CMA filter
     )
 
-@cache_utils.azure_cache_decorator(ttl=300)  # 5 minutes - filter options change with selections
-def filter_options(data, column, selected_filters):
-    """
-    Returns available options for a filter based on currently selected values in other filters.
-    
-    Args:
-        data (pandas.DataFrame): The source data
-        column (str): The column name to get options for
-        selected_filters (dict): Dictionary of currently selected values for other filters
-    
-    Returns:
-        list: List of available options as dictionaries with 'label' and 'value' keys
-    """
-    mask = pd.Series(True, index=data.index)
-    for col, values in selected_filters.items():
-        if values and col != column:
-            mask &= data.index.get_level_values(col).isin(values)
-    
-    available_values = sorted(data[mask].index.get_level_values(column).unique())
-    return [{'label': val, 'value': val} for val in available_values]
-
 @app.callback(
     Output('stem-bhase-filter', 'options'),
     Output('year-filter', 'options'),
@@ -1071,33 +1050,85 @@ def filter_options(data, column, selected_filters):
     Input('isced-filter', 'value'),
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
-    Input('cma-filter', 'value')
+    Input('cma-filter', 'value'),
+    # Chart selection stores
+    Input({'type': 'store', 'item': 'isced'}, 'data'),
+    Input({'type': 'store', 'item': 'province'}, 'data'),
+    Input('selected-feature', 'data'),
+    Input({'type': 'store', 'item': 'credential'}, 'data'),
+    Input({'type': 'store', 'item': 'institution'}, 'data'),
+    Input({'type': 'store', 'item': 'cma'}, 'data'),
+    Input('clear-selection', 'n_clicks')
 )
-def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas):
-    """Updates filter options based on other filter selections"""
+def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas,
+                         selected_isced, selected_province, selected_feature,
+                         selected_credential, selected_institution, selected_cma,
+                         clear_clicks):
+    """
+    Updates filter options based on both dropdown selections and chart selections.
+    Works with MultiIndex data structure.
+    """
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
-        
-    # Create dictionary of current filter selections
-    current_filters = {
-        'STEM/BHASE': stem_bhase or [],
-        'Academic Year': years or [],
-        'Province or Territory': provs or [],
-        'CMA/CSD': cmas or [],
-        'ISCED Level of Education': isced or [],
-        'Credential Type': credentials or [],
-        'Institution': institutions or []
+    
+    # Start with dropdown selections
+    updated_filters = {
+        'STEM/BHASE': set(stem_bhase or []),
+        'Academic Year': set(years or []),
+        'Province or Territory': set(provs or []),
+        'CMA/CSD': set(cmas or []),
+        'ISCED Level of Education': set(isced or []),
+        'Credential Type': set(credentials or []),
+        'Institution': set(institutions or [])
     }
     
-    # Get updated options for each filter
-    stem_options = filter_options(data, 'STEM/BHASE', {k:v for k,v in current_filters.items() if k != 'STEM/BHASE'})
-    year_options = filter_options(data, 'Academic Year', {k:v for k,v in current_filters.items() if k != 'Academic Year'})
-    prov_options = filter_options(data, 'Province or Territory', {k:v for k,v in current_filters.items() if k != 'Province or Territory'})
-    cma_options = filter_options(data, 'CMA/CSD', {k:v for k,v in current_filters.items() if k != 'CMA/CSD'})
-    isced_options = filter_options(data, 'ISCED Level of Education', {k:v for k,v in current_filters.items() if k != 'ISCED Level of Education'})
-    cred_options = filter_options(data, 'Credential Type', {k:v for k,v in current_filters.items() if k != 'Credential Type'})
-    inst_options = filter_options(data, 'Institution', {k:v for k,v in current_filters.items() if k != 'Institution'})
+    # Add chart selections if they're not already in the corresponding filter
+    if selected_isced and selected_isced not in updated_filters['ISCED Level of Education']:
+        updated_filters['ISCED Level of Education'].add(selected_isced)
+    
+    if selected_province and selected_province not in updated_filters['Province or Territory']:
+        updated_filters['Province or Territory'].add(selected_province)
+    
+    if selected_credential and selected_credential not in updated_filters['Credential Type']:
+        updated_filters['Credential Type'].add(selected_credential)
+    
+    if selected_institution and selected_institution not in updated_filters['Institution']:
+        updated_filters['Institution'].add(selected_institution)
+    
+    if selected_cma and selected_cma not in updated_filters['CMA/CSD']:
+        updated_filters['CMA/CSD'].add(selected_cma)
+    
+    # Handle map feature selection
+    if selected_feature:
+        try:
+            feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
+            if feature_cma and feature_cma not in updated_filters['CMA/CSD']:
+                updated_filters['CMA/CSD'].add(feature_cma)
+        except (IndexError, KeyError):
+            pass  # Silently handle the case where feature_cma can't be found
+    
+    # Generate filter options by excluding the target dimension from filters
+    stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
+                                            {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
+    
+    year_options = data_utils.filter_options(data, 'Academic Year', 
+                                           {k: v for k, v in updated_filters.items() if k != 'Academic Year'})
+    
+    prov_options = data_utils.filter_options(data, 'Province or Territory', 
+                                           {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
+    
+    cma_options = data_utils.filter_options(data, 'CMA/CSD', 
+                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CSD'})
+    
+    isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
+                                            {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
+    
+    cred_options = data_utils.filter_options(data, 'Credential Type', 
+                                          {k: v for k, v in updated_filters.items() if k != 'Credential Type'})
+    
+    inst_options = data_utils.filter_options(data, 'Institution', 
+                                          {k: v for k, v in updated_filters.items() if k != 'Institution'})
     
     return (
         stem_options,
