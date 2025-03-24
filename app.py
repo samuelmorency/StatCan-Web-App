@@ -57,10 +57,8 @@ server = app.server
 cache_utils.initialize_cache()
 
 # Load initial data
-combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(lambda: gpd.read_parquet(
-    "data/combined_longlat_simplified.parquet" if SIMPLIFIED_SF == True else "data/combined_longlat_clean.parquet"
-))()
-data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_pickle)("data/cleaned_data.pkl")
+combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(gpd.read_parquet)("data/combined_longlat_simplified.parquet")
+data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_parquet)("data/cleaned_data.parquet")
 #print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
 #print("GeoDataFrame columns:", combined_longlat_clean.columns)
 
