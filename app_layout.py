@@ -344,6 +344,7 @@ def initialize_pivot_table(data):
         cols=['Academic Year'],
         rows=['Province or Territory', 'CMA/CA/CSD'],
         vals=['Value'],
+        hiddenFromDragDrop=['DGUID'],
         aggregatorName='Integer Sum',
         rendererName='Table',
         colOrder='key_a_to_z',
