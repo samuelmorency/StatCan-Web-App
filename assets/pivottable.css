@@ -19,7 +19,7 @@
 }
 
 table.pvtTable {
-    font-size: 12px;
+    font-size: 14px;
     text-align: left;
     border-collapse: collapse;
     margin-top: 3px;
@@ -27,12 +27,14 @@ table.pvtTable {
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
 }
+
 table.pvtTable thead tr th,
 table.pvtTable tbody tr th {
     background-color: #F1F1F1;
     border: 1px solid #97989A; /* Using LIGHT_GREY */
-    font-size: 12px;
-    padding: 5px;
+    font-size: 14px;
+    padding: 8px;
+    font-weight: 600;
 }
 
 table.pvtTable .pvtColLabel {
@@ -44,11 +46,12 @@ table.pvtTable .pvtTotalLabel {
 
 table.pvtTable tbody tr td {
     color: #24272A; /* Using IIC_BLACK */
-    padding: 5px;
+    padding: 8px;
     background-color: #fff;
     border: 1px solid #97989A; /* Using LIGHT_GREY */
     vertical-align: top;
     text-align: right;
+    font-weight: 400;
 }
 
 .pvtTotal,
@@ -79,7 +82,6 @@ table.pvtTable tbody tr td {
     min-width: 20px;
     min-height: 20px;
 }
-
 .pvtRenderers {
     padding-left: 5px;
     user-select: none;
@@ -94,10 +96,9 @@ table.pvtTable tbody tr td {
     -ms-user-select: none;
     margin: 3px;
 }
-
 .pvtDropdownIcon {
     float: right;
-    color: #a2b1c6;
+    color: #54575A;
 }
 .pvtDropdownCurrent {
     text-align: left;
@@ -109,11 +110,9 @@ table.pvtTable tbody tr td {
     box-sizing: border-box;
     background: white;
 }
-
 .pvtDropdownCurrentOpen {
     border-radius: 4px 4px 0 0;
 }
-
 .pvtDropdownMenu {
     background: white;
     position: absolute;
@@ -124,7 +123,6 @@ table.pvtTable tbody tr td {
     border-top: 1px solid #dfe8f3;
     box-sizing: border-box;
 }
-
 .pvtDropdownValue {
     padding: 2px 5px;
     font-size: 12px;
@@ -295,9 +293,9 @@ table.pvtTable tbody tr td {
     max-height: 30vh;
     border-top: 1px solid #dfe8f3;
     font-family: 'Open Sans', sans-serif;
-    font-weight: 600;
+    font-weight: 500;
 }
-
+/*
 .pvtCheckContainer p {
     margin: 0;
     margin-bottom: 1px;
@@ -334,4 +332,21 @@ table.pvtTable tbody tr td {
 
 .pvtRendererArea {
     padding: 5px;
+}
+*/
+/* --- Accessible Focus Styles --- */
+/* Visible focus indicator for interactive elements */
+.pvtDropdownCurrent:focus,
+.pvtButton:focus,
+.pvtRowOrder:focus,
+.pvtColOrder:focus,
+.pvtCloseX:focus,
+.pvtDragHandle:focus {
+    outline: 2px solid #008FBE; /* IIC Blue for focus visibility */
+    outline-offset: 2px;
+}
+/* Change sort icon color on focus */
+.pvtRowOrder:focus .pvtTriangle,
+.pvtColOrder:focus .pvtTriangle {
+    color: #008FBE;
 }
