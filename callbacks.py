@@ -70,6 +70,7 @@ def update_chart_selection(clickData, clear_clicks, stored_value, figure):
     Output({'type': 'graph', 'item': 'cma'}, 'figure'),
     Output({'type': 'graph', 'item': 'credential'}, 'figure'),
     Output({'type': 'graph', 'item': 'institution'}, 'figure'),
+    Output({'type': 'graph', 'item': 'cip'}, 'figure'),
     Output('map', 'viewport'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
@@ -78,16 +79,18 @@ def update_chart_selection(clickData, clear_clicks, stored_value, figure):
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
     Input('cma-filter', 'value'),
+    Input('cip-filter', 'value'),
     Input({'type': 'store', 'item': 'isced'}, 'data'),
     Input({'type': 'store', 'item': 'province'}, 'data'),
     Input('selected-feature', 'data'),
     Input({'type': 'store', 'item': 'credential'}, 'data'),
     Input({'type': 'store', 'item': 'institution'}, 'data'),
     Input({'type': 'store', 'item': 'cma'}, 'data'),
+    Input({'type': 'store', 'item': 'cip'}, 'data'),
     State('map', 'viewport')
 )
-def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals, inst_vals, cma_vals,
-                          sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma,
+def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals, inst_vals, cma_vals, cip_vals,
+                          sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma, sel_cip,
                           current_viewport):
     """
     Main callback to update all visualizations (map and charts) based on filter inputs and any selected items.
@@ -107,7 +110,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             pass
 
     # Step 1: Apply primary filters and aggregate data
-    (filtered_df, cma_grads, isced_grads, province_grads, credential_grads, institution_grads) = (
+    (filtered_df, cma_grads, isced_grads, province_grads, credential_grads, institution_grads, cip_grads) = (
         data_utils.preprocess_data(
             tuple(stem_vals or []),
             tuple(year_vals or []),
@@ -115,7 +118,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             tuple(isced_vals or []),
             tuple(cred_vals or []),
             tuple(inst_vals or []),
-            tuple(cma_vals or [])
+            tuple(cma_vals or []),
+            tuple(cip_vals or [])
         )
     )
 
@@ -134,6 +138,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             df = df[df['Institution'] == sel_inst]
         if sel_cma:
             df = df[df['CMA/CA/CSD'] == sel_cma]
+        if sel_cip:
+            df = df[df['CIP Name'] == sel_cip]
         if df.empty:
             return create_empty_response()
         # Recalculate aggregations on this cross-filtered subset
@@ -142,7 +148,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         province_grads = df.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
         credential_grads = df.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
         institution_grads = df.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
-
+        cip_grads = df.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
+        
     # Step 3: Prepare GeoJSON data for the map
     # Merge geometry with aggregated data (inner join to include only regions with data)
     # logger.info(f"combined_longlat_clean shape: {combined_longlat_clean.shape}")
@@ -154,7 +161,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         return create_empty_response()
     # Determine if we should update map viewport (on filter changes or new selection)
     update_view = trigger_id in ['stem-bhase-filter','year-filter','prov-filter','isced-filter',
-                                 'credential-filter','institution-filter','selected-feature',
+                                 'credential-filter','institution-filter', 'cip-filter', 'selected-feature',
                                  'clear-selection','reset-filters']
     if update_view:
         bounds = cma_data.total_bounds  # (minx, miny, maxx, maxy)
@@ -204,11 +211,12 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     fig_cma = data_utils.create_chart(cma_grads, 'CMA/CA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature)
     fig_credential = data_utils.create_chart(credential_grads, 'Credential Type', 'graduates', 'Credential Type', sel_cred)
     fig_institution = data_utils.create_chart(institution_grads, 'Institution', 'graduates', 'Institution', sel_inst)
-
+    fig_cip = data_utils.create_chart(cip_grads, 'CIP Name', 'graduates', 'CIP Name', sel_cip)
+    
     # (Optional) Monitor cache usage for debugging performance
     cache_utils.monitor_cache_usage()
 
-    return geojson, fig_isced, fig_province, fig_cma, fig_credential, fig_institution, viewport
+    return geojson, fig_isced, fig_province, fig_cma, fig_credential, fig_institution, fig_cip, viewport
 
 @dash.callback(
     Output('stem-bhase-filter', 'value'),
@@ -218,6 +226,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     Output('credential-filter', 'value'),
     Output('institution-filter', 'value'),
     Output('cma-filter', 'value'),
+    Output('cip-filter', 'value'),
     Input('reset-filters', 'n_clicks'),
     prevent_initial_call=True
 )
@@ -228,7 +237,7 @@ def reset_filters(n_clicks):
     return (
         [opt['value'] for opt in data_utils.stem_bhase_options_full],
         [opt['value'] for opt in data_utils.year_options_full],
-        [], [], [], [], []  # empty lists = "All" for multi-select filters
+        [], [], [], [], [], []  # empty lists = "All" for multi-select filters
     )
 
 @dash.callback(
@@ -239,6 +248,7 @@ def reset_filters(n_clicks):
     Output('isced-filter', 'options'),
     Output('credential-filter', 'options'),
     Output('institution-filter', 'options'),
+    Output('cip-filter', 'options'),
     Input('stem-bhase-filter', 'value'),
     Input('year-filter', 'value'),
     Input('prov-filter', 'value'),
@@ -246,6 +256,7 @@ def reset_filters(n_clicks):
     Input('credential-filter', 'value'),
     Input('institution-filter', 'value'),
     Input('cma-filter', 'value'),
+    Input('cip-filter', 'value'),
     # Chart selection stores
     Input({'type': 'store', 'item': 'isced'}, 'data'),
     Input({'type': 'store', 'item': 'province'}, 'data'),
@@ -253,11 +264,12 @@ def reset_filters(n_clicks):
     Input({'type': 'store', 'item': 'credential'}, 'data'),
     Input({'type': 'store', 'item': 'institution'}, 'data'),
     Input({'type': 'store', 'item': 'cma'}, 'data'),
+    Input({'type': 'store', 'item': 'cip'}, 'data'),
     Input('clear-selection', 'n_clicks')
 )
-def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas,
+def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas, cips,
                          selected_isced, selected_province, selected_feature,
-                         selected_credential, selected_institution, selected_cma,
+                         selected_credential, selected_institution, selected_cma, selected_cip,
                          clear_clicks):
     """
     Updates filter options based on both dropdown selections and chart selections.
@@ -275,7 +287,8 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
         'CMA/CA/CSD': set(cmas or []),
         'ISCED Level of Education': set(isced or []),
         'Credential Type': set(credentials or []),
-        'Institution': set(institutions or [])
+        'Institution': set(institutions or []),
+        'CIP Name': set(cips or [])
     }
     
     # Add chart selections if they're not already in the corresponding filter
@@ -303,6 +316,9 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
         except (IndexError, KeyError):
             pass  # Silently handle the case where feature_cma can't be found
     
+    if selected_cip and selected_cip not in updated_filters['CIP Name']:
+        updated_filters['CIP Name'].add(selected_cip)
+    
     # Generate filter options by excluding the target dimension from filters
     stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
                                             {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
@@ -325,6 +341,9 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     inst_options = data_utils.filter_options(data, 'Institution', 
                                           {k: v for k, v in updated_filters.items() if k != 'Institution'})
     
+    cip_options = data_utils.filter_options(data, 'CIP Name', 
+                                          {k: v for k, v in updated_filters.items() if k != 'CIP Name'})
+    
     return (
         stem_options,
         year_options,
@@ -332,7 +351,8 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
         cma_options,
         isced_options,
         cred_options,
-        inst_options
+        inst_options,
+        cip_options
     )
 
 @dash.callback(
@@ -426,4 +446,4 @@ def create_empty_response():
     empty_fig = {}
     default_bounds = [[41, -141], [83, -52]]  # Canada bounding box
     default_viewport = {'bounds': default_bounds, 'transition': "flyToBounds"}
-    return (empty_geojson, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, default_viewport)
+    return (empty_geojson, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, default_viewport)

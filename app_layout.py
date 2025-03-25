@@ -353,7 +353,7 @@ def initialize_pivot_table(data):
         #className='pvtUi'
     )
 
-def create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full):
+def create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full, cip_options_full):
     # ...existing code...
     stem_bhase_args = filter_args("stem-bhase-filter", stem_bhase_options_full, checklist_format)
     year_args = filter_args("year-filter", year_options_full, checklist_format)
@@ -362,6 +362,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     credential_args = filter_args("credential-filter", credential_options_full, multi_dropdown_format)
     institution_args = filter_args("institution-filter", institution_options_full, multi_dropdown_format)
     cma_args = filter_args("cma-filter", cma_options_full, multi_dropdown_format)
+    cip_args = filter_args("cip-filter", cip_options_full, multi_dropdown_format)
     reset_filters_args = button_args("reset-filters", bc.MAIN_RED, "white", button_format)
     clear_selection_args = button_args("clear-selection", "danger", bc.IIC_BLACK, button_format)
     download_button_args = button_args('download-button', bc.MAIN_RED, "white", button_format)
@@ -398,6 +399,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dcc.Dropdown(**credential_args),
                 html.Label("Institution:", style=LABEL_STYLE),
                 dcc.Dropdown(**institution_args),
+                html.Label("CIP Name:", style=LABEL_STYLE),
+                dcc.Dropdown(**cip_args),
                 #dbc.Button('Reset Filters', **reset_filters_args),
                 dbc.Button('Reset Filters', id='reset-filters', color="secondary", className="me-1"),
                 #dbc.Button('Clear Selection', **clear_selection_args, outline=True),
@@ -407,6 +410,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 dcc.Store(id={'type': 'store', 'item': 'cma'}, data=None),
                 dcc.Store(id={'type': 'store', 'item': 'credential'}, data=None),
                 dcc.Store(id={'type': 'store', 'item': 'institution'}, data=None),
+                dcc.Store(id={'type': 'store', 'item': 'cip'}, data=None),
             ])
         ], className="mb-4 h-100"),
         id="horizontal-collapse",
@@ -489,6 +493,22 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
             ),
         ])
     ], className="mb-2 mt-2")
+    
+    # Add this card definition after institution_card
+    cip_card = dbc.Card([
+        dbc.CardHeader("Number of Graduates by CIP Name", style=CARD_HEADER_STYLE),
+        dbc.CardBody([
+            dbc.Spinner(
+                html.Div([
+                    html.Div(
+                        dcc.Graph(id={'type': 'graph', 'item': 'cip'}, config={'displaylogo': False}), className='scroll'
+                    )
+                ]),
+                color="primary",
+                type="border",
+            ),
+        ])
+    ], className="mb-2 mt-2")
 
     visualization_content = html.Div([
         
@@ -508,7 +528,8 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                     dbc.Col([credential_card], width=6)
                 ], className="mb-2"),
                 dbc.Row([
-                    dbc.Col([institution_card], width=10)
+                    dbc.Col([institution_card], width=6),
+                    dbc.Col([cip_card], width=6)
                 ], justify="center", className="mb-4"),
             ])
         ], style={'background-color': '#F1F1F1'})

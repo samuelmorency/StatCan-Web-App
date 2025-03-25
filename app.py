@@ -63,11 +63,12 @@ data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_parquet)("data/cleane
 #print("GeoDataFrame columns:", combined_longlat_clean.columns)
 
 # Ensure categorical types for filters:
-for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education","Credential Type","Institution","CMA/CA/CSD","DGUID"]:
+for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education",
+           "Credential Type","Institution","CMA/CA/CSD","DGUID","CIP Name"]:
     data[col] = data[col].astype('category')
 data['Value'] = data['Value'].astype('float32')
 data = data.set_index(["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education",
-                       "Credential Type","Institution","CMA/CA/CSD","DGUID"]).sort_index()
+                       "Credential Type","Institution","CMA/CA/CSD","DGUID","CIP Name"]).sort_index()
 
 # Set up filter optimizer with loaded data
 data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
@@ -79,6 +80,8 @@ cma_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_leve
 isced_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('ISCED Level of Education').unique())]
 credential_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Credential Type').unique())]
 institution_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Institution').unique())]
+cip_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('CIP Name').unique())]
+
 # Save options in data_utils (for use in reset_filters callback)
 data_utils.stem_bhase_options_full = stem_bhase_options_full
 data_utils.year_options_full = year_options_full
@@ -87,6 +90,7 @@ data_utils.cma_options_full = cma_options_full
 data_utils.isced_options_full = isced_options_full
 data_utils.credential_options_full = credential_options_full
 data_utils.institution_options_full = institution_options_full
+data_utils.cip_options_full = cip_options_full
 
 app.layout = html.Div([
     html.Link(
@@ -95,7 +99,8 @@ app.layout = html.Div([
     ),
     dcc.Store(id='client-data-store', storage_type='session'),
     dcc.Store(id='client-filters-store', storage_type='local'),
-    create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, credential_options_full, institution_options_full, cma_options_full)
+    create_layout(data, stem_bhase_options_full, year_options_full, prov_options_full, isced_options_full, 
+                 credential_options_full, institution_options_full, cma_options_full, cip_options_full)
 ])
 
 import callbacks

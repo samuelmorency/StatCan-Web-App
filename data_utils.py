@@ -70,7 +70,7 @@ institution_options_full = []
 
 @azure_cache_decorator(ttl=300)
 @monitor_performance
-def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_institutions, sel_cmas):
+def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_institutions, sel_cmas, sel_cips):
     """
     Filter the main DataFrame according to selections and aggregate the results.
     Returns a tuple: (filtered_df, cma_grads, isced_grads, province_grads, credential_grads, institution_grads).
@@ -84,6 +84,7 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
         'Credential Type': set(sel_creds),
         'Institution': set(sel_institutions),
         'CMA/CA/CSD': set(sel_cmas),
+        'CIP Name': set(sel_cips),
         'DGUID': set()  # always empty (acts as a placeholder for selection filtering)
     }
     # Apply optimized filtering
@@ -91,7 +92,7 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
     if filtered_data.empty:
         # Return empty dataframes for each aggregation if nothing passes the filters
         empty_df = pd.DataFrame()
-        return (filtered_data.reset_index(), empty_df, empty_df, empty_df, empty_df, empty_df)
+        return (filtered_data.reset_index(), empty_df, empty_df, empty_df, empty_df, empty_df, empty_df)
     #logger.info(f"filtered_data shape: {filtered_data.shape}")
     #logger.info(f"filtered_data sample:\n{filtered_data.head()}")
     # Aggregate graduate counts by various dimensions
@@ -102,7 +103,8 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
     province_grads = filtered_data.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
     credential_grads = filtered_data.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
     institution_grads = filtered_data.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
-    return (filtered_data.reset_index(), cma_grads, isced_grads, province_grads, credential_grads, institution_grads)
+    cip_grads = filtered_data.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
+    return (filtered_data.reset_index(), cma_grads, isced_grads, province_grads, credential_grads, institution_grads, cip_grads)
 
 @azure_cache_decorator(ttl=300)
 def create_chart(df, x_column, y_column, x_label, selected_value=None):
@@ -135,7 +137,7 @@ def create_chart(df, x_column, y_column, x_label, selected_value=None):
         font=dict(family='Open Sans', size=12, color=bc.IIC_BLACK),
         plot_bgcolor='#D5DADC', paper_bgcolor='white',
         margin=dict(l=5, r=50, t=25, b=5),
-        height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area'] else CHART_HEIGHT,
+        height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area', 'CIP Name'] else CHART_HEIGHT,
         # Add space after tick labels
         yaxis=dict(ticksuffix=' '),
         # Remove unnecessary modebar buttons:
