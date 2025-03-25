@@ -341,8 +341,8 @@ def initialize_pivot_table(data):
     return PivotTable(
         id='pivot-table',
         data=data.reset_index().to_dict('records'),
-        cols=['year'],
-        rows=['Province_Territory', 'CMA_CA'],
+        cols=['Academic Year'],
+        rows=['Province or Territory', 'CMA/CA/CSD'],
         vals=['Value'],
         aggregatorName='Integer Sum',
         rendererName='Table',
@@ -390,7 +390,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
                 }),
                 html.Label("Province:", style=LABEL_STYLE),
                 dcc.Dropdown(**prov_args),
-                html.Label("Census Metropolitan Area/Census Agglomeration:", style=LABEL_STYLE),
+                html.Label("CMA/CA/CSD:", style=LABEL_STYLE),
                 dcc.Dropdown(**cma_args),
                 html.Label("ISCED Level:", style=LABEL_STYLE),
                 dcc.Dropdown(**isced_args),
@@ -415,7 +415,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     )
     
     map_card = dbc.Card([
-        dbc.CardHeader("Number of Graduates by CMA/CSD", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CA/CSD", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 dl.Map(**map_args),
@@ -450,7 +450,7 @@ def create_layout(data, stem_bhase_options_full, year_options_full, prov_options
     ], className="mb-2 mt-2")
     
     cma_card = dbc.Card([
-        dbc.CardHeader("Number of Graduates by CMA/CSD", style=CARD_HEADER_STYLE),
+        dbc.CardHeader("Number of Graduates by CMA/CA/CSD", style=CARD_HEADER_STYLE),
         dbc.CardBody([
             dbc.Spinner(
                 html.Div([

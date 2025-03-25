@@ -83,7 +83,7 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
         'ISCED Level of Education': set(sel_isced),
         'Credential Type': set(sel_creds),
         'Institution': set(sel_institutions),
-        'CMA/CSD': set(sel_cmas),
+        'CMA/CA/CSD': set(sel_cmas),
         'DGUID': set()  # always empty (acts as a placeholder for selection filtering)
     }
     # Apply optimized filtering
@@ -95,7 +95,7 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
     #logger.info(f"filtered_data shape: {filtered_data.shape}")
     #logger.info(f"filtered_data sample:\n{filtered_data.head()}")
     # Aggregate graduate counts by various dimensions
-    cma_grads = filtered_data.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+    cma_grads = filtered_data.groupby(["CMA/CA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
     #logger.info(f"cma_grads shape: {cma_grads.shape}")
     #logger.info(f"cma_grads sample:\n{cma_grads.head()}")
     isced_grads = filtered_data.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')

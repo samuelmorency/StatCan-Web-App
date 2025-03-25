@@ -63,11 +63,11 @@ data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_parquet)("data/cleane
 #print("GeoDataFrame columns:", combined_longlat_clean.columns)
 
 # Ensure categorical types for filters:
-for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education","Credential Type","Institution","CMA/CSD","DGUID"]:
+for col in ["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education","Credential Type","Institution","CMA/CA/CSD","DGUID"]:
     data[col] = data[col].astype('category')
 data['Value'] = data['Value'].astype('float32')
 data = data.set_index(["STEM/BHASE","Academic Year","Province or Territory","ISCED Level of Education",
-                       "Credential Type","Institution","CMA/CSD","DGUID"]).sort_index()
+                       "Credential Type","Institution","CMA/CA/CSD","DGUID"]).sort_index()
 
 # Set up filter optimizer with loaded data
 data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
@@ -75,7 +75,7 @@ data_utils.filter_optimizer = data_utils.FilterOptimizer(data)
 stem_bhase_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('STEM/BHASE').unique())]
 year_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Academic Year').unique())]
 prov_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Province or Territory').unique())]
-cma_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('CMA/CSD').unique())]
+cma_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('CMA/CA/CSD').unique())]
 isced_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('ISCED Level of Education').unique())]
 credential_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Credential Type').unique())]
 institution_options_full = [{'label': v, 'value': v} for v in sorted(data.index.get_level_values('Institution').unique())]

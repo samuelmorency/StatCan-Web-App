@@ -133,11 +133,11 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         if sel_inst:
             df = df[df['Institution'] == sel_inst]
         if sel_cma:
-            df = df[df['CMA/CSD'] == sel_cma]
+            df = df[df['CMA/CA/CSD'] == sel_cma]
         if df.empty:
             return create_empty_response()
         # Recalculate aggregations on this cross-filtered subset
-        cma_grads = df.groupby(["CMA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+        cma_grads = df.groupby(["CMA/CA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
         isced_grads = df.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
         province_grads = df.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
         credential_grads = df.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
@@ -186,14 +186,14 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             'properties': {
                 'graduates': int(row['graduates']),
                 'DGUID': str(row['DGUID']),
-                'CMA/CSD': row['CMA/CSD'],
+                'CMA/CA/CSD': row['CMA/CA/CSD'],
                 'style': {
                     'fillColor': color,
                     'color': bc.IIC_BLACK if str(row['DGUID']) == selected_feature else bc.GREY,
                     'weight': 2 if str(row['DGUID']) == selected_feature else 0.75,
                     'fillOpacity': 0.8
                 },
-                'tooltip': f"<div style='font-family: Open Sans; font-weight:600;'>{row['CMA/CSD']}: {int(row['graduates']):,}</div>"
+                'tooltip': f"<div style='font-family: Open Sans; font-weight:600;'>{row['CMA/CA/CSD']}: {int(row['graduates']):,}</div>"
             }
         })
     geojson = {'type': 'FeatureCollection', 'features': features}
@@ -201,7 +201,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     # Step 4: Generate chart figures for each dimension
     fig_isced = data_utils.create_chart(isced_grads, 'ISCED Level of Education', 'graduates', 'ISCED Level of Education', sel_isced)
     fig_province = data_utils.create_chart(province_grads, 'Province or Territory', 'graduates', 'Province/Territory', sel_prov)
-    fig_cma = data_utils.create_chart(cma_grads, 'CMA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature)
+    fig_cma = data_utils.create_chart(cma_grads, 'CMA/CA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature)
     fig_credential = data_utils.create_chart(credential_grads, 'Credential Type', 'graduates', 'Credential Type', sel_cred)
     fig_institution = data_utils.create_chart(institution_grads, 'Institution', 'graduates', 'Institution', sel_inst)
 
@@ -272,7 +272,7 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
         'STEM/BHASE': set(stem_bhase or []),
         'Academic Year': set(years or []),
         'Province or Territory': set(provs or []),
-        'CMA/CSD': set(cmas or []),
+        'CMA/CA/CSD': set(cmas or []),
         'ISCED Level of Education': set(isced or []),
         'Credential Type': set(credentials or []),
         'Institution': set(institutions or [])
@@ -291,15 +291,15 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     if selected_institution and selected_institution not in updated_filters['Institution']:
         updated_filters['Institution'].add(selected_institution)
     
-    if selected_cma and selected_cma not in updated_filters['CMA/CSD']:
-        updated_filters['CMA/CSD'].add(selected_cma)
+    if selected_cma and selected_cma not in updated_filters['CMA/CA/CSD']:
+        updated_filters['CMA/CA/CSD'].add(selected_cma)
     
     # Handle map feature selection
     if selected_feature:
         try:
             feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
-            if feature_cma and feature_cma not in updated_filters['CMA/CSD']:
-                updated_filters['CMA/CSD'].add(feature_cma)
+            if feature_cma and feature_cma not in updated_filters['CMA/CA/CSD']:
+                updated_filters['CMA/CA/CSD'].add(feature_cma)
         except (IndexError, KeyError):
             pass  # Silently handle the case where feature_cma can't be found
     
@@ -313,8 +313,8 @@ def update_filter_options(stem_bhase, years, provs, isced, credentials, institut
     prov_options = data_utils.filter_options(data, 'Province or Territory', 
                                            {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
     
-    cma_options = data_utils.filter_options(data, 'CMA/CSD', 
-                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CSD'})
+    cma_options = data_utils.filter_options(data, 'CMA/CA/CSD', 
+                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CA/CSD'})
     
     isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
                                             {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
