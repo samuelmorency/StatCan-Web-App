@@ -5,7 +5,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import brand_colours as bc
 from cache_utils import azure_cache_decorator, logger
-from dash import Patch
 
 CHART_HEIGHT = 500
 
@@ -68,7 +67,6 @@ cma_options_full = []
 isced_options_full = []
 credential_options_full = []
 institution_options_full = []
-cip_options_full = []
 
 @azure_cache_decorator(ttl=300)
 @monitor_performance
@@ -109,20 +107,16 @@ def preprocess_data(sel_stem, sel_years, sel_provs, sel_isced, sel_creds, sel_in
     return (filtered_data.reset_index(), cma_grads, isced_grads, province_grads, credential_grads, institution_grads, cip_grads)
 
 @azure_cache_decorator(ttl=300)
-def create_chart(df, x_column, y_column, x_label, selected_value=None, current_figure=None):
+def create_chart(df, x_column, y_column, x_label, selected_value=None):
     """
     Create a horizontal bar chart figure from an aggregated DataFrame.
     Highlights the bar for `selected_value` in red if provided.
-    
-    If current_figure is provided, returns a Patch object with only the changed data.
     """
     if df is None or df.empty:
         return {}
-        
     # Sort data for consistent order (smallest to largest)
     sorted_df = df.sort_values(y_column, ascending=True)
     sorted_df['text'] = sorted_df[y_column].apply(lambda v: f"{int(v):,}")
-    
     # Determine bar colors – all red scale if no selection, otherwise highlight one
     if selected_value:
         colors = [bc.MAIN_RED if cat == selected_value else bc.LIGHT_GREY for cat in sorted_df[x_column]]
@@ -130,54 +124,26 @@ def create_chart(df, x_column, y_column, x_label, selected_value=None, current_f
     else:
         colors = sorted_df[y_column]  # use values (will apply a continuous colorscale)
         color_scale = bc.BRIGHT_RED_SCALE  # custom red color scale from brand_colours
-    
-    # Check if we have a current figure and can use Patch for minimal updates
-    if current_figure and isinstance(current_figure, dict) and 'data' in current_figure and current_figure['data']:
-        # Create a Patch object for minimal updates
-        patched_fig = Patch()
-        
-        # Update only the data and color properties
-        patched_fig['data'][0]['x'] = sorted_df[y_column].tolist()
-        patched_fig['data'][0]['y'] = sorted_df[x_column].tolist()
-        patched_fig['data'][0]['text'] = sorted_df['text'].tolist()
-        
-        # Update marker colors
-        if isinstance(colors, list):
-            patched_fig['data'][0]['marker']['color'] = colors
-        else:
-            patched_fig['data'][0]['marker']['color'] = colors.tolist()
-            if color_scale:
-                patched_fig['data'][0]['marker']['colorscale'] = color_scale
-        
-        # Update height if needed (for dynamic charts like Institution)
-        if x_label in ['Institution', 'Census Metropolitan Area', 'CIP Name']:
-            height = max(CHART_HEIGHT, 25 * len(sorted_df.index))
-            if height != current_figure.get('layout', {}).get('height'):
-                patched_fig['layout']['height'] = height
-                
-        return patched_fig
-    else:
-        # Create a full figure for initial rendering
-        fig = go.Figure(go.Bar(
-            x=sorted_df[y_column], y=sorted_df[x_column],
-            orientation='h',
-            text=sorted_df['text'], textposition='outside', cliponaxis=False,
-            marker=dict(color=colors, colorscale=color_scale),
-            hovertemplate='%{y}: %{x:,}<extra></extra>'
-        ))
-        # Layout adjustments for readability
-        fig.update_layout(
-            showlegend=False, xaxis_title=None, yaxis_title=None,
-            font=dict(family='Open Sans', size=12, color=bc.IIC_BLACK),
-            plot_bgcolor='#D5DADC', paper_bgcolor='white',
-            margin=dict(l=5, r=50, t=25, b=5),
-            height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area', 'CIP Name'] else CHART_HEIGHT,
-            # Add space after tick labels
-            yaxis=dict(ticksuffix=' '),
-            # Remove unnecessary modebar buttons:
-            modebar_remove=['zoom','pan','select','zoomIn','zoomOut','autoScale','resetScale','lasso2d']
-        )
-        return fig
+    fig = go.Figure(go.Bar(
+        x=sorted_df[y_column], y=sorted_df[x_column],
+        orientation='h',
+        text=sorted_df['text'], textposition='outside', cliponaxis=False,
+        marker=dict(color=colors, colorscale=color_scale),
+        hovertemplate='%{y}: %{x:,}<extra></extra>'
+    ))
+    # Layout adjustments for readability
+    fig.update_layout(
+        showlegend=False, xaxis_title=None, yaxis_title=None,
+        font=dict(family='Open Sans', size=12, color=bc.IIC_BLACK),
+        plot_bgcolor='#D5DADC', paper_bgcolor='white',
+        margin=dict(l=5, r=50, t=25, b=5),
+        height=max(CHART_HEIGHT, 25 * len(sorted_df.index)) if x_label in ['Institution', 'Census Metropolitan Area', 'CIP Name'] else CHART_HEIGHT,
+        # Add space after tick labels
+        yaxis=dict(ticksuffix=' '),
+        # Remove unnecessary modebar buttons:
+        modebar_remove=['zoom','pan','select','zoomIn','zoomOut','autoScale','resetScale','lasso2d']
+    )
+    return fig
 
 @azure_cache_decorator(ttl=300)
 def filter_options(data, column, selected_filters):
