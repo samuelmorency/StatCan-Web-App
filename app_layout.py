@@ -274,7 +274,7 @@ logo = dbc.Navbar(
                 dbc.Nav(
                     [
                         html.Div(
-                            "The Canadian Centre for Education Statistics (CCES) at Statistics Canada by CSBP. July 2024.",
+                            "The Canadian Centre for Education Statistics (CCES) at Statistics Canada by CSBP. March 2025.",
                             className="me-3 text-light d-flex align-items-center",
                             style={"font-size": "12px", "font-style": "italic"}
                         ),
