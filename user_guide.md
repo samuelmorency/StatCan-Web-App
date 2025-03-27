@@ -1,114 +1,52 @@
 ## Introduction
+Welcome to the Canadian STEM/BHASE Graduates Dashboard. This tool lets you explore and analyze graduate statistics from Canadian post‑secondary institutions at a glance.
 
-This tool helps you explore graduate data across Canadian educational institutions.
+## Dashboard Overview
+When you open the dashboard, you will see two main views:
+- **Interactive Map and Charts:** Figures that show graduate data across Canada.
+- **Data Explorer:** A customizable pivot table.
 
----
-
-## Getting Started
-
-#### Dashboard Overview
-When you first open the dashboard, you'll see two main tabs:
-1. Interactive Map and Charts
-2. Data Explorer
-
-The Interactive Map and Charts tab gives you a visual overview of graduate statistics across Canada. The Data Explorer tab lets you dive deep into specific numbers and create custom reports.
-
-#### Basic Navigation
-- Use the tabs at the top to switch between views
-- Find filters on the left side of the screen
-- Click "Show/hide filters" to make more space for your visualizations
-- Use "Reset Filters" to start fresh
-- Click "Clear Selection" to remove any highlighted selections
-
----
+## Navigating the Dashboard
+- **Tabs:** Switch between “Interactive Map and Charts" and “Data Explorer” using the tabs at the top.
+- **Filters:** Use the filter panel on the left to refine data.  
+  - **Show/Hide Filters:** Click the button to expand or collapse the filter panel.
+  - **Reset Filters:** Click to clear all filters.
+  - **Clear Selection:** Click to undo any cross-filtering selections.
 
 ## Understanding the Visualizations
-
-#### Map View
-The interactive map of Canada shows graduate numbers across different regions:
-- Darker colors mean more graduates
-- Lighter colors mean fewer graduates
-- Hover over any region to see its graduate numbers
-- Click a region to focus on its data across all charts
-
-#### Charts and Graphs
-Below the map, you'll find several charts showing graduate numbers by:
-- Education level
-- Province
-- Region
-- Credential type
-- Institution
-
-Each chart is interactive - click on bars to focus on specific data points.
-
-#### Data Explorer View
-The Data Explorer tab offers:
-- Detailed data tables
-- Custom report creation
-- Data download options
-- Flexible data organization
-
----
+- **Color Coding:** Darker reds indicate higher graduate counts; lighter reds indicate lower graduate counts.
+- **Hover:** Move your mouse over map regions or chart bars to view graduate numbers.
+- **Click (Cross‑Filtering):**  
+  - Clicking a map region or chart bar updates all visualizations to reflect that selection.
+  - Use the “Clear Selection” button to return to the full data view.
 
 ## Working with Filters
+- **Available Filters:**  
+  - **STEM/BHASE:** Filter by program type (e.g., STEM or BHASE).
+  - **Academic Year:** Select from available school years.
+  - **Province or Territory:** Filter by region.
+  - **ISCED Level:** Filter by level of education (Bachelor's, Master's, etc.).
+  - **Credential Type:** Filter by the type of credential (Degree, Diploma, etc.).
+  - **Institution:** Select specific universities or colleges.
+  - **CIP Name:** Select specific fields of study.
+- Leave a filter empty to include all options.
 
-#### Available Filters
-- STEM/BHASE: Science, technology, engineering and mathematics (STEM) and Business, humanities, health, arts, social science and education (BHASE) programs
-- Academic Year: School years from 2019/2020 to 2021/2022
-- Province/Territory
-- Education Level: Bachelor's, Master's, Doctoral, etc.
-- Institution: List of Universities, Colleges, etc.
-- Credential Type: Degree, Diploma, Certificate, etc.
-
-#### Filter Tips
-- You can select multiple options in each filter
-- Leaving a filter empty shows all options
-- Filters work together to refine your view
-
----
-
-## Interacting with Visualizations
-
-The dashboard offers two main ways to interact with the data:
-
-#### Hovering
-- Hover over any coloured region on the map to see the number of graduates
-- Bars in charts have the same behaviour
-
-#### Cross-Filtering (Clicking)
-The dashboard's powerful cross-filtering feature activates when you click:
-- Click a region on the map → All charts update to show only that region's data
-- Click a bar in any chart → Map and other charts update to show only related data
-- Click "Clear Selection" to remove any selections and show all data again
-
-#### Why It's Useful
-- Quickly see relationships in your data
-- Compare different aspects of the same selection
-- Explore patterns across regions and categories
-- Build a complete picture of graduate trends
-
----
-
-## Analyzing Data
-
-#### Basic Analysis
-1. Choose your area of interest using filters
-2. Explore the map by clicking and dragging, scrolling to zoom, and hovering to view numbers
-3. Review the charts for categorical breakdowns
-
-#### Advanced Features
-- Cross-filter by clicking map and chart elements
-- Create custom reports in Data Explorer
-
----
-
-## Tips and Best Practices
-- Use "Reset Filters" and "Clear Selection" to start fresh
-- Use the Data Explorer for detailed analysis and data export
-
----
+## Using the Data Explorer
+The pivot table  provides a flexible way to analyze the data:
+- **Configure Layout:**  
+  - **Rows & Columns:** Drag and drop field names into the Row or Column areas (to the left of/above the table) to pivot your data.
+  - **Aggregator Functions:** Select an aggregator (e.g., Sum, Average, Count) from the control panel to define how data is summarized.
+- **Add filters:**  
+  - Click the small upside-down triangle to the right of a field's title to filter its values.
+- **Export Your Data:**  
+  - Once you have configured the pivot table, click “Download as Displayed” to export the current view as a CSV file.
 
 ## Data Coverage
-- Years: 2019-2022
-- Major metropolitan areas
-- Public post-secondary institutions
+- **Years:** 2019/20, 2020/21, 2021/22, and 2022/23 academic years
+- **Scope:** Public post‑secondary institutions across Canada
+
+## Metadata
+View the full metadata here: [IIC-CSBP_Metadata STEM and BHASE Enrollments and Graduates_2022-2023](https://invcanadazone.sharepoint.com/:b:/r/sites/infozone/Statistics%20Canada%20Custom%20Data/STEM%20and%20BHASE%20Enrollments%20and%20Graduates/2022-2023%20Academic%20Year/IIC-CSBP_Metadata%20STEM%20and%20BHASE%20Enrollments%20and%20Graduates_2022-2023.pdf?csf=1&web=1&e=4TyHT8)
+
+## Help
+Report issues or get help by contacting us at [InfoZone@invcanada.ca](mailto:InfoZone@invcanada.ca)
