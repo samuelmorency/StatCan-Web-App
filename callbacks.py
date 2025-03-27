@@ -1,5 +1,5 @@
 # callbacks.py – All Dash callbacks
-from dash import callback_context, no_update, dcc
+from dash import callback_context, no_update, dcc, Patch
 from dash.dependencies import Input, Output, State, MATCH
 from dash.exceptions import PreventUpdate
 from app import data, combined_longlat_clean#, app
@@ -87,13 +87,22 @@ def update_chart_selection(clickData, clear_clicks, stored_value, figure):
     Input({'type': 'store', 'item': 'institution'}, 'data'),
     Input({'type': 'store', 'item': 'cma'}, 'data'),
     Input({'type': 'store', 'item': 'cip'}, 'data'),
-    State('map', 'viewport')
+    State('map', 'viewport'),
+    State('cma-geojson', 'data'),
+    State({'type': 'graph', 'item': 'isced'}, 'figure'),
+    State({'type': 'graph', 'item': 'province'}, 'figure'),
+    State({'type': 'graph', 'item': 'cma'}, 'figure'),
+    State({'type': 'graph', 'item': 'credential'}, 'figure'),
+    State({'type': 'graph', 'item': 'institution'}, 'figure'),
+    State({'type': 'graph', 'item': 'cip'}, 'figure')
 )
 def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals, inst_vals, cma_vals, cip_vals,
                           sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma, sel_cip,
-                          current_viewport):
+                          current_viewport, current_geojson, current_isced_fig, current_prov_fig, 
+                          current_cma_fig, current_cred_fig, current_inst_fig, current_cip_fig):
     """
     Main callback to update all visualizations (map and charts) based on filter inputs and any selected items.
+    Uses Patch for more efficient updates.
     """
     # Determine what triggered the update
     ctx = callback_context
@@ -109,7 +118,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         except Exception:
             pass
 
-    # Step 1: Apply primary filters and aggregate data
+    # Apply primary filters and aggregate data (same as before)
     (filtered_df, cma_grads, isced_grads, province_grads, credential_grads, institution_grads, cip_grads) = (
         data_utils.preprocess_data(
             tuple(stem_vals or []),
@@ -123,7 +132,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         )
     )
 
-    # Step 2: Apply cross-filters if any selection is active (chart or map selections)
+    # Apply cross-filters if any selection is active (chart or map selections)
     if any([sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma]):
         df = filtered_df  # this is the row-level DataFrame from preprocess_data (reset_index form)
         if sel_isced:
@@ -150,19 +159,24 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         institution_grads = df.groupby("Institution", observed=True)['Value'].sum().reset_index(name='graduates')
         cip_grads = df.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
         
-    # Step 3: Prepare GeoJSON data for the map
-    # Merge geometry with aggregated data (inner join to include only regions with data)
-    # logger.info(f"combined_longlat_clean shape: {combined_longlat_clean.shape}")
-    # logger.info(f"combined_longlat_clean sample:\n{combined_longlat_clean.head()}")
+    # Initialize Patch objects for each output
+    geo_patch = Patch()
+    isced_patch = Patch()
+    province_patch = Patch()
+    cma_patch = Patch()
+    credential_patch = Patch()
+    institution_patch = Patch()
+    cip_patch = Patch()
+    
+    # Prepare map data
     cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='inner')
-    # logger.info(f"cma_data shape after merge: {cma_data.shape}")
-    # logger.info(f"cma_data sample:\n{cma_data.head()}")
     if cma_data.empty:
         return create_empty_response()
-    # Determine if we should update map viewport (on filter changes or new selection)
+    
+    # Determine if we should update map viewport
     update_view = trigger_id in ['stem-bhase-filter','year-filter','prov-filter','isced-filter',
-                                 'credential-filter','institution-filter', 'cip-filter', 'selected-feature',
-                                 'clear-selection','reset-filters']
+                               'credential-filter','institution-filter', 'cip-filter', 'selected-feature',
+                               'clear-selection','reset-filters']
     if update_view:
         bounds = cma_data.total_bounds  # (minx, miny, maxx, maxy)
         lat_pad = (bounds[3] - bounds[1]) * 0.1
@@ -173,9 +187,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     else:
         viewport = no_update
 
-    # Ensure geometry JSON is computed (to avoid repeated shapely -> dict conversion)
-    if 'geometry_json' not in combined_longlat_clean:
-        combined_longlat_clean['geometry_json'] = combined_longlat_clean.geometry.apply(lambda geom: geom.__geo_interface__)
+    # Update GeoJSON with Patch
+    # For map data, we'll create a new features list since the regions shown might change significantly
     # Assign colors to each region based on graduates count
     max_val = cma_data['graduates'].max()
     min_val = cma_data['graduates'].min()
@@ -184,12 +197,13 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         colors = px.colors.sample_colorscale(data_utils.bc.BRIGHT_RED_SCALE if hasattr(data_utils, 'bc') else bc.BRIGHT_RED_SCALE, norm)
     else:
         colors = [bc.BRIGHT_RED_SCALE[-1]] * len(cma_data)
+    
     # Build GeoJSON features list
     features = []
     for (_, row), color in zip(cma_data.iterrows(), colors):
         features.append({
             'type': 'Feature',
-            'geometry': row.geometry.__geo_interface__,  # use geometry_json if desired
+            'geometry': row.geometry.__geo_interface__,
             'properties': {
                 'graduates': int(row['graduates']),
                 'DGUID': str(row['DGUID']),
@@ -203,20 +217,38 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
                 'tooltip': f"<div style='font-family: Open Sans; font-weight:600;'>{row['CMA/CA/CSD']}: {int(row['graduates']):,}</div>"
             }
         })
-    geojson = {'type': 'FeatureCollection', 'features': features}
-
-    # Step 4: Generate chart figures for each dimension
-    fig_isced = data_utils.create_chart(isced_grads, 'ISCED Level of Education', 'graduates', 'ISCED Level of Education', sel_isced)
-    fig_province = data_utils.create_chart(province_grads, 'Province or Territory', 'graduates', 'Province/Territory', sel_prov)
-    fig_cma = data_utils.create_chart(cma_grads, 'CMA/CA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature)
-    fig_credential = data_utils.create_chart(credential_grads, 'Credential Type', 'graduates', 'Credential Type', sel_cred)
-    fig_institution = data_utils.create_chart(institution_grads, 'Institution', 'graduates', 'Institution', sel_inst)
-    fig_cip = data_utils.create_chart(cip_grads, 'CIP Name', 'graduates', 'CIP Name', sel_cip)
+    
+    # Update only the features property of geojson
+    geo_patch['features'] = features
+    
+    # ISCED chart
+    isced_fig = data_utils.create_chart(isced_grads, 'ISCED Level of Education', 'graduates', 
+                                        'ISCED Level of Education', sel_isced, current_isced_fig)
+    
+    # Province chart
+    province_fig = data_utils.create_chart(province_grads, 'Province or Territory', 'graduates', 
+                                           'Province/Territory', sel_prov, current_prov_fig)
+    
+    # CMA chart
+    cma_fig = data_utils.create_chart(cma_grads, 'CMA/CA/CSD', 'graduates', 
+                                      'Census Metropolitan Area', selected_feature, current_cma_fig)
+    
+    # Credential chart
+    credential_fig = data_utils.create_chart(credential_grads, 'Credential Type', 'graduates', 
+                                            'Credential Type', sel_cred, current_cred_fig)
+    
+    # Institution chart
+    institution_fig = data_utils.create_chart(institution_grads, 'Institution', 'graduates', 
+                                             'Institution', sel_inst, current_inst_fig)
+    
+    # CIP chart
+    cip_fig = data_utils.create_chart(cip_grads, 'CIP Name', 'graduates', 
+                                     'CIP Name', sel_cip, current_cip_fig)
     
     # (Optional) Monitor cache usage for debugging performance
     cache_utils.monitor_cache_usage()
 
-    return geojson, fig_isced, fig_province, fig_cma, fig_credential, fig_institution, fig_cip, viewport
+    return geo_patch, isced_patch, province_patch, cma_patch, credential_patch, institution_patch, cip_patch, viewport
 
 @dash.callback(
     Output('stem-bhase-filter', 'value'),
@@ -441,9 +473,14 @@ dash.clientside_callback(
 )
 
 def create_empty_response():
-    """Produce empty outputs (geojson, 5 figs, viewport) for no-data cases."""
-    empty_geojson = {'type': 'FeatureCollection', 'features': []}
-    empty_fig = {}
+    """Produce empty outputs for no-data cases."""
+    empty_geojson = Patch()
+    empty_geojson['features'] = []
+    
+    empty_fig = Patch()
+    empty_fig['data'] = []
+    
     default_bounds = [[41, -141], [83, -52]]  # Canada bounding box
     default_viewport = {'bounds': default_bounds, 'transition': "flyToBounds"}
+    
     return (empty_geojson, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, default_viewport)
