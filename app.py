@@ -84,6 +84,9 @@ cache_utils.initialize_cache()
 
 # Load initial data
 combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(gpd.read_parquet)("data/combined_longlat_simplified.parquet")
+# Set DGUID as index for faster merges, keep it as a column too
+if 'DGUID' in combined_longlat_clean.columns and not combined_longlat_clean.index.name == 'DGUID':
+    combined_longlat_clean = combined_longlat_clean.set_index('DGUID', drop=False)
 data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_parquet)("data/cleaned_data.parquet")
 
 # Rename Quebec to Québec if necessary

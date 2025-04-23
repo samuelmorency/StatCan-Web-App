@@ -111,7 +111,7 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             pass
 
     # Step 1: Apply primary filters and aggregate data
-    (filtered_df, cma_grads, isced_grads, province_grads, credential_grads, institution_grads, cip_grads) = (
+    (filtered_df, cma_grads_agg, isced_grads, province_grads, credential_grads, institution_grads, cip_grads) = (
         data_utils.preprocess_data(
             tuple(stem_vals or []),
             tuple(year_vals or []),
@@ -123,6 +123,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
             tuple(cip_vals or [])
         )
     )
+    # Set DGUID index for faster merge
+    cma_grads = cma_grads_agg.set_index('DGUID')
 
     # Step 2: Apply cross-filters if any selection is active (chart or map selections)
     if any([sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma]):
@@ -144,7 +146,9 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         if df.empty:
             return create_empty_response()
         # Recalculate aggregations on this cross-filtered subset
-        cma_grads = df.groupby(["CMA/CA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+        cma_grads_agg = df.groupby(["CMA/CA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
+        # Set DGUID index for faster merge
+        cma_grads = cma_grads_agg.set_index('DGUID')
         isced_grads = df.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
         province_grads = df.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
         credential_grads = df.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
@@ -152,7 +156,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         cip_grads = df.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
         
     # Step 3: Prepare GeoJSON data for the map
-    cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='inner')
+    # Merge on indices for efficiency
+    cma_data = combined_longlat_clean.merge(cma_grads, left_index=True, right_index=True, how='inner')
     if cma_data.empty:
         return create_empty_response()
 
@@ -172,8 +177,8 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
 
     # --- Optimized GeoJSON Generation ---
 
-    # Ensure DGUID is string for comparisons
-    cma_data['DGUID_str'] = cma_data['DGUID'].astype(str)
+    # Ensure DGUID is string for comparisons - Access the index directly
+    cma_data['DGUID_str'] = cma_data.index.astype(str)
     selected_feature_str = str(selected_feature) if selected_feature else None
 
     # 1. Vectorized Color Calculation
