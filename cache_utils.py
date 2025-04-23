@@ -1,5 +1,5 @@
 # cache_utils.py – Caching system implementation
-import os, time, tempfile, logging, atexit
+import os, time, tempfile, logging, atexit, platform
 from diskcache import Cache
 
 logging.basicConfig(level=logging.INFO)
@@ -23,18 +23,37 @@ class AzureCache:
         indicators = ['WEBSITE_SITE_NAME','WEBSITE_INSTANCE_ID','WEBSITE_RESOURCE_GROUP']
         return any(var in os.environ for var in indicators)
     def _get_cache_path(self):
-        azure_path = r'D:\local\Temp\dash_cache'
-        if os.path.exists(r'D:\local'):
-            logger.info("Using Azure local storage for cache")
-            return azure_path
-        home = os.environ.get('HOME')
-        if home:
-            home_cache = os.path.join(home, 'dash_cache')
-            logger.info(f"Using home directory for cache: {home_cache}")
-            return home_cache
-        tmp = os.path.join(tempfile.gettempdir(), 'dash_cache')
-        logger.info(f"Using temp directory for cache: {tmp}")
-        return tmp
+        """Determines the appropriate path for disk caching."""
+        # Check if running in Azure App Service (Windows or Linux)
+        if 'WEBSITE_INSTANCE_ID' in os.environ:
+            # Use persistent storage under D:\home (Windows) or /home (Linux)
+            # Note: App Service maps D:\home to /home on Linux containers
+            home_dir = os.environ.get('HOME', 'D:\\home') # Default to D:\home for Windows
+            cache_dir = os.path.join(home_dir, 'site', 'wwwroot', 'dash_cache')
+            logger.info(f"Azure App Service detected. Using persistent cache path: {cache_dir}")
+        elif platform.system() == 'Windows':
+            # Local Windows development: Use temp directory
+            cache_dir = os.path.join(tempfile.gettempdir(), 'dash_cache')
+            logger.info(f"Local Windows detected. Using temp cache path: {cache_dir}")
+        else:
+            # Other environments (e.g., local Linux/Mac): Use temp directory
+            cache_dir = os.path.join(tempfile.gettempdir(), 'dash_cache')
+            logger.info(f"Other environment detected. Using temp cache path: {cache_dir}")
+
+        # Ensure the directory exists
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create cache directory {cache_dir}: {e}")
+            # Fallback to a basic temp dir if creation fails
+            cache_dir = os.path.join(tempfile.gettempdir(), 'dash_cache_fallback')
+            try:
+                os.makedirs(cache_dir, exist_ok=True)
+                logger.warning(f"Using fallback cache directory: {cache_dir}")
+            except OSError as e_fallback:
+                logger.error(f"Failed to create fallback cache directory {cache_dir}: {e_fallback}")
+                return None # Indicate failure if even fallback fails
+        return cache_dir
     def _init_disk_cache(self):
         try:
             os.makedirs(self._CACHE_DIR, exist_ok=True)

@@ -10,6 +10,7 @@ import plotly.express as px
 from pathlib import Path
 #from cache_utils import logger
 import dash
+import numpy as np
 
 @dash.callback(
     Output('selected-feature', 'data'),
@@ -151,14 +152,10 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         cip_grads = df.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
         
     # Step 3: Prepare GeoJSON data for the map
-    # Merge geometry with aggregated data (inner join to include only regions with data)
-    # logger.info(f"combined_longlat_clean shape: {combined_longlat_clean.shape}")
-    # logger.info(f"combined_longlat_clean sample:\n{combined_longlat_clean.head()}")
     cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='inner')
-    # logger.info(f"cma_data shape after merge: {cma_data.shape}")
-    # logger.info(f"cma_data sample:\n{cma_data.head()}")
     if cma_data.empty:
         return create_empty_response()
+
     # Determine if we should update map viewport (on filter changes or new selection)
     update_view = trigger_id in ['stem-bhase-filter','year-filter','prov-filter','isced-filter',
                                  'credential-filter','institution-filter', 'cip-filter', 'selected-feature',
@@ -173,37 +170,55 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     else:
         viewport = no_update
 
-    # Ensure geometry JSON is computed (to avoid repeated shapely -> dict conversion)
-    if 'geometry_json' not in combined_longlat_clean:
-        combined_longlat_clean['geometry_json'] = combined_longlat_clean.geometry.apply(lambda geom: geom.__geo_interface__)
-    # Assign colors to each region based on graduates count
+    # --- Optimized GeoJSON Generation ---
+
+    # Ensure DGUID is string for comparisons
+    cma_data['DGUID_str'] = cma_data['DGUID'].astype(str)
+    selected_feature_str = str(selected_feature) if selected_feature else None
+
+    # 1. Vectorized Color Calculation
     max_val = cma_data['graduates'].max()
     min_val = cma_data['graduates'].min()
     if max_val > min_val:
+        # Normalize graduates count (handle potential division by zero)
         norm = (cma_data['graduates'] - min_val) / (max_val - min_val)
-        colors = px.colors.sample_colorscale(data_utils.bc.BRIGHT_RED_SCALE if hasattr(data_utils, 'bc') else bc.BRIGHT_RED_SCALE, norm)
+        # Use the correct reference to brand_colours
+        fill_colors = pd.Series(px.colors.sample_colorscale(bc.BRIGHT_RED_SCALE, norm), index=cma_data.index)
     else:
-        colors = [bc.BRIGHT_RED_SCALE[-1]] * len(cma_data)
-    # Build GeoJSON features list
-    features = []
-    for (_, row), color in zip(cma_data.iterrows(), colors):
-        features.append({
+        # Assign the top color if all values are the same
+        fill_colors = pd.Series(bc.BRIGHT_RED_SCALE[-1], index=cma_data.index)
+
+    # 2. Vectorized Style Properties
+    line_colors = np.where(cma_data['DGUID_str'] == selected_feature_str, bc.IIC_BLACK, bc.GREY)
+    line_weights = np.where(cma_data['DGUID_str'] == selected_feature_str, 2, 0.75)
+    fill_opacity = 0.8 # Constant for all features
+
+    # 3. Vectorized Tooltip Generation
+    tooltips = (f"<div style='font-family: Open Sans; font-weight:600;'>{name}: {int(grads):,}</div>" 
+                for name, grads in zip(cma_data['CMA/CA/CSD'], cma_data['graduates']))
+
+    # 4. Construct Properties Dictionary Series
+    # Combine style elements into a dictionary for each feature
+    styles = [{"fillColor": fc, "color": lc, "weight": lw, "fillOpacity": fill_opacity} 
+              for fc, lc, lw in zip(fill_colors, line_colors, line_weights)]
+
+    # Combine all properties needed for the GeoJSON feature
+    properties = [{"graduates": int(grad), "DGUID": dguid_str, "CMA/CA/CSD": name, "style": style, "tooltip": tip} 
+                  for grad, dguid_str, name, style, tip in zip(cma_data['graduates'], cma_data['DGUID_str'], cma_data['CMA/CA/CSD'], styles, tooltips)]
+
+    # 5. Build GeoJSON features list using geometry and properties
+    # Accessing __geo_interface__ is generally efficient for GeoPandas geometries
+    features = [
+        {
             'type': 'Feature',
-            'geometry': row.geometry.__geo_interface__,  # use geometry_json if desired
-            'properties': {
-                'graduates': int(row['graduates']),
-                'DGUID': str(row['DGUID']),
-                'CMA/CA/CSD': row['CMA/CA/CSD'],
-                'style': {
-                    'fillColor': color,
-                    'color': bc.IIC_BLACK if str(row['DGUID']) == selected_feature else bc.GREY,
-                    'weight': 2 if str(row['DGUID']) == selected_feature else 0.75,
-                    'fillOpacity': 0.8
-                },
-                'tooltip': f"<div style='font-family: Open Sans; font-weight:600;'>{row['CMA/CA/CSD']}: {int(row['graduates']):,}</div>"
-            }
-        })
+            'geometry': geom.__geo_interface__,
+            'properties': prop
+        }
+        for geom, prop in zip(cma_data.geometry, properties)
+    ]
+
     geojson = {'type': 'FeatureCollection', 'features': features}
+    # --- End Optimized GeoJSON Generation ---
 
     # Step 4: Generate chart figures for each dimension
     fig_isced = data_utils.create_chart(isced_grads, 'ISCED Level of Education', 'graduates', 'ISCED Level of Education', sel_isced)
@@ -260,99 +275,94 @@ def reset_filters(n_clicks):
     # Chart selection stores
     Input({'type': 'store', 'item': 'isced'}, 'data'),
     Input({'type': 'store', 'item': 'province'}, 'data'),
-    Input('selected-feature', 'data'),
+    Input('selected-feature', 'data'), # Map selection (DGUID)
     Input({'type': 'store', 'item': 'credential'}, 'data'),
     Input({'type': 'store', 'item': 'institution'}, 'data'),
-    Input({'type': 'store', 'item': 'cma'}, 'data'),
+    Input({'type': 'store', 'item': 'cma'}, 'data'), # Chart selection (Name)
     Input({'type': 'store', 'item': 'cip'}, 'data'),
     Input('clear-selection', 'n_clicks')
 )
 def update_filter_options(stem_bhase, years, provs, isced, credentials, institutions, cmas, cips,
-                         selected_isced, selected_province, selected_feature,
-                         selected_credential, selected_institution, selected_cma, selected_cip,
+                         selected_isced, selected_province, selected_feature_dguid,
+                         selected_credential, selected_institution, selected_cma_name, selected_cip,
                          clear_clicks):
     """
-    Updates filter options based on both dropdown selections and chart selections.
-    Works with MultiIndex data structure.
+    Optimized: Updates filter options based on dropdowns and selections.
+    Filters the preprocessed subset instead of the full dataset repeatedly.
     """
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
-    
-    # Start with dropdown selections
-    updated_filters = {
-        'STEM/BHASE': set(stem_bhase or []),
-        'Academic Year': set(years or []),
-        'Province or Territory': set(provs or []),
-        'CMA/CA/CSD': set(cmas or []),
-        'ISCED Level of Education': set(isced or []),
-        'Credential Type': set(credentials or []),
-        'Institution': set(institutions or []),
-        'CIP Name': set(cips or [])
+
+    # 1. Get the data subset based on primary dropdown filters
+    (filtered_df, _, _, _, _, _, _) = data_utils.preprocess_data(
+        tuple(stem_bhase or []), tuple(years or []), tuple(provs or []),
+        tuple(isced or []), tuple(credentials or []), tuple(institutions or []),
+        tuple(cmas or []), tuple(cips or [])
+    )
+
+    if filtered_df.empty:
+        # If primary filters yield no data, return empty options for multi-selects, full for checklists
+        empty_opts = []
+        return (data_utils.stem_bhase_options_full, data_utils.year_options_full,
+                empty_opts, empty_opts, empty_opts, empty_opts, empty_opts, empty_opts)
+
+    # 2. Define active cross-filters (from chart/map selections)
+    cross_filters = {
+        'ISCED Level of Education': selected_isced,
+        'Province or Territory': selected_province,
+        'DGUID': selected_feature_dguid, # Map selection uses DGUID
+        'Credential Type': selected_credential,
+        'Institution': selected_institution,
+        'CMA/CA/CSD': selected_cma_name, # CMA chart selection uses Name
+        'CIP Name': selected_cip
     }
-    
-    # Add chart selections if they're not already in the corresponding filter
-    if selected_isced and selected_isced not in updated_filters['ISCED Level of Education']:
-        updated_filters['ISCED Level of Education'].add(selected_isced)
-    
-    if selected_province and selected_province not in updated_filters['Province or Territory']:
-        updated_filters['Province or Territory'].add(selected_province)
-    
-    if selected_credential and selected_credential not in updated_filters['Credential Type']:
-        updated_filters['Credential Type'].add(selected_credential)
-    
-    if selected_institution and selected_institution not in updated_filters['Institution']:
-        updated_filters['Institution'].add(selected_institution)
-    
-    if selected_cma and selected_cma not in updated_filters['CMA/CA/CSD']:
-        updated_filters['CMA/CA/CSD'].add(selected_cma)
-    
-    # Handle map feature selection
-    if selected_feature:
-        try:
-            feature_cma = combined_longlat_clean[combined_longlat_clean['DGUID'] == selected_feature]['NAME'].iloc[0]
-            if feature_cma and feature_cma not in updated_filters['CMA/CA/CSD']:
-                updated_filters['CMA/CA/CSD'].add(feature_cma)
-        except (IndexError, KeyError):
-            pass  # Silently handle the case where feature_cma can't be found
-    
-    if selected_cip and selected_cip not in updated_filters['CIP Name']:
-        updated_filters['CIP Name'].add(selected_cip)
-    
-    # Generate filter options by excluding the target dimension from filters
-    stem_options = data_utils.filter_options(data, 'STEM/BHASE', 
-                                            {k: v for k, v in updated_filters.items() if k != 'STEM/BHASE'})
-    
-    year_options = data_utils.filter_options(data, 'Academic Year', 
-                                           {k: v for k, v in updated_filters.items() if k != 'Academic Year'})
-    
-    prov_options = data_utils.filter_options(data, 'Province or Territory', 
-                                           {k: v for k, v in updated_filters.items() if k != 'Province or Territory'})
-    
-    cma_options = data_utils.filter_options(data, 'CMA/CA/CSD', 
-                                          {k: v for k, v in updated_filters.items() if k != 'CMA/CA/CSD'})
-    
-    isced_options = data_utils.filter_options(data, 'ISCED Level of Education', 
-                                            {k: v for k, v in updated_filters.items() if k != 'ISCED Level of Education'})
-    
-    cred_options = data_utils.filter_options(data, 'Credential Type', 
-                                          {k: v for k, v in updated_filters.items() if k != 'Credential Type'})
-    
-    inst_options = data_utils.filter_options(data, 'Institution', 
-                                          {k: v for k, v in updated_filters.items() if k != 'Institution'})
-    
-    cip_options = data_utils.filter_options(data, 'CIP Name', 
-                                          {k: v for k, v in updated_filters.items() if k != 'CIP Name'})
-    
+    active_cross_filters = {k: v for k, v in cross_filters.items() if v is not None}
+
+    # 3. Helper function to get options for a target column from the subset
+    def get_options(target_column):
+        temp_df = filtered_df
+        # Apply cross-filters, *excluding* the target column's own selection
+        filters_to_apply = {k: v for k, v in active_cross_filters.items() if k != target_column}
+        
+        for col, value in filters_to_apply.items():
+            if not temp_df.empty and col in temp_df.columns:
+                 # Handle potential mismatch (e.g., DGUID vs CMA Name) - needs adjustment if complex cases arise
+                if col == 'DGUID' and target_column == 'CMA/CA/CSD': continue # Don't filter CMA options by DGUID selection
+                if col == 'CMA/CA/CSD' and target_column == 'DGUID': continue # Don't filter DGUID options by CMA name selection (though DGUID isn't a dropdown)
+
+                temp_df = temp_df[temp_df[col] == value]
+            elif not temp_df.empty:
+                 cache_utils.logger.warning(f"Column '{col}' not found in filtered_df for cross-filtering options for '{target_column}'.")
+
+
+        if not temp_df.empty and target_column in temp_df.columns:
+            unique_vals = sorted(temp_df[target_column].unique())
+            return [{'label': v, 'value': v} for v in unique_vals]
+        else:
+            return [] # No options available if df becomes empty or column missing
+
+    # 4. Calculate options for each filter using the helper
+    # Checklists (STEM, Year) should ideally show all options unless cross-filtered?
+    # For simplicity now, let's filter them too, but could revert to full list if needed.
+    stem_options = get_options('STEM/BHASE')
+    year_options = get_options('Academic Year')
+    prov_options = get_options('Province or Territory')
+    cma_options = get_options('CMA/CA/CSD')
+    isced_options = get_options('ISCED Level of Education')
+    cred_options = get_options('Credential Type')
+    inst_options = get_options('Institution')
+    cip_options = get_options('CIP Name')
+
+    # Ensure checklists always have options if the initial filtered_df wasn't empty
+    # This might be desired UX - decide based on requirements.
+    # if not stem_options and not filtered_df.empty: stem_options = data_utils.stem_bhase_options_full
+    # if not year_options and not filtered_df.empty: year_options = data_utils.year_options_full
+
+
     return (
-        stem_options,
-        year_options,
-        prov_options,
-        cma_options,
-        isced_options,
-        cred_options,
-        inst_options,
-        cip_options
+        stem_options, year_options, prov_options, cma_options,
+        isced_options, cred_options, inst_options, cip_options
     )
 
 @dash.callback(
