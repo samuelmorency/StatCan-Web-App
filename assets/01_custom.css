@@ -26,3 +26,17 @@ float: left;
     border-radius: 4px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
+
+/* Increase spacing for dropdown options to prevent overlap */
+.Select-option {
+  padding-top: 8px !important; /* Add more space above text */
+  padding-bottom: 8px !important; /* Add more space below text */
+  line-height: 1.4 !important; /* Improve readability for wrapped text */
+  white-space: normal !important; /* Ensure text wraps */
+}
+
+/* Optional: Adjust hover/focus states if needed */
+.Select-option.is-focused {
+  background-color: #f0f0f0; /* Example focus style */
+}
+
