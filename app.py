@@ -85,6 +85,14 @@ cache_utils.initialize_cache()
 # Load initial data
 combined_longlat_clean = cache_utils.azure_cache_decorator(ttl=3600)(gpd.read_parquet)("data/combined_longlat_simplified.parquet")
 data = cache_utils.azure_cache_decorator(ttl=3600)(pd.read_parquet)("data/cleaned_data.parquet")
+
+# Rename Quebec to Québec if necessary
+if 'Province or Territory' in data.columns:
+    data['Province or Territory'] = data['Province or Territory'].replace('Quebec', 'Québec')
+elif 'Province or Territory' in data.index.names:
+    # Handle case where it might be in the index after loading
+    data.index = data.index.set_levels(data.index.levels[data.index.names.index('Province or Territory')].str.replace('Quebec', 'Québec'), level='Province or Territory')
+
 #print("Main DataFrame columns:", data.index.names if data.index.nlevels > 1 else data.columns)
 #print("GeoDataFrame columns:", combined_longlat_clean.columns)
 
