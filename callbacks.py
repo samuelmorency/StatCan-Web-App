@@ -124,10 +124,16 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         )
     )
     # Set DGUID index for faster merge
-    cma_grads = cma_grads_agg.set_index('DGUID')
+    # Ensure DGUID column exists before setting index
+    if 'DGUID' in cma_grads_agg.columns:
+        cma_grads = cma_grads_agg.set_index('DGUID')
+    else:
+        # Handle case where DGUID might be missing (though unlikely based on groupby)
+        cache_utils.logger.warning("DGUID column missing in cma_grads_agg after preprocess_data")
+        cma_grads = cma_grads_agg # Proceed without index if missing
 
     # Step 2: Apply cross-filters if any selection is active (chart or map selections)
-    if any([sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma]):
+    if any([sel_isced, sel_prov, selected_feature, sel_cred, sel_inst, sel_cma, sel_cip]):
         df = filtered_df  # this is the row-level DataFrame from preprocess_data (reset_index form)
         if sel_isced:
             df = df[df['ISCED Level of Education'] == sel_isced]
@@ -148,7 +154,12 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         # Recalculate aggregations on this cross-filtered subset
         cma_grads_agg = df.groupby(["CMA/CA/CSD", "DGUID"], observed=True)['Value'].sum().reset_index(name='graduates')
         # Set DGUID index for faster merge
-        cma_grads = cma_grads_agg.set_index('DGUID')
+        if 'DGUID' in cma_grads_agg.columns:
+             cma_grads = cma_grads_agg.set_index('DGUID')
+        else:
+             cache_utils.logger.warning("DGUID column missing in cma_grads_agg after cross-filtering")
+             cma_grads = cma_grads_agg # Proceed without index if missing
+
         isced_grads = df.groupby("ISCED Level of Education", observed=True)['Value'].sum().reset_index(name='graduates')
         province_grads = df.groupby("Province or Territory", observed=True)['Value'].sum().reset_index(name='graduates')
         credential_grads = df.groupby("Credential Type", observed=True)['Value'].sum().reset_index(name='graduates')
@@ -156,8 +167,12 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
         cip_grads = df.groupby("CIP Name", observed=True)['Value'].sum().reset_index(name='graduates')
         
     # Step 3: Prepare GeoJSON data for the map
-    # Merge on indices for efficiency
-    cma_data = combined_longlat_clean.merge(cma_grads, left_index=True, right_index=True, how='inner')
+    # Merge on indices for efficiency, check if cma_grads has index first
+    if cma_grads.index.name == 'DGUID':
+        cma_data = combined_longlat_clean.merge(cma_grads, left_index=True, right_index=True, how='inner')
+    else: # Fallback to column merge if index wasn't set (e.g., DGUID missing)
+         cma_data = combined_longlat_clean.merge(cma_grads, on='DGUID', how='inner')
+
     if cma_data.empty:
         return create_empty_response()
 
@@ -178,7 +193,15 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     # --- Optimized GeoJSON Generation ---
 
     # Ensure DGUID is string for comparisons - Access the index directly
-    cma_data['DGUID_str'] = cma_data.index.astype(str)
+    # Check if DGUID is the index before accessing
+    if cma_data.index.name == 'DGUID':
+        cma_data['DGUID_str'] = cma_data.index.astype(str)
+    elif 'DGUID' in cma_data.columns: # Fallback if merge happened on column
+        cma_data['DGUID_str'] = cma_data['DGUID'].astype(str)
+    else: # Handle case where DGUID is missing entirely
+        cache_utils.logger.error("DGUID missing in cma_data before GeoJSON generation")
+        return create_empty_response() # Or handle differently
+
     selected_feature_str = str(selected_feature) if selected_feature else None
 
     # 1. Vectorized Color Calculation
@@ -226,9 +249,16 @@ def update_visualizations(stem_vals, year_vals, prov_vals, isced_vals, cred_vals
     # --- End Optimized GeoJSON Generation ---
 
     # Step 4: Generate chart figures for each dimension
+    # Pass the DataFrame with 'CMA/CA/CSD' as a column
+    # If cma_grads has DGUID index, reset it for the chart function if needed,
+    # or ensure create_chart handles index/columns appropriately.
+    # Assuming create_chart needs 'CMA/CA/CSD' as a column:
+    chart_cma_df = cma_grads.reset_index() if cma_grads.index.name == 'DGUID' else cma_grads
+
     fig_isced = data_utils.create_chart(isced_grads, 'ISCED Level of Education', 'graduates', 'ISCED Level of Education', sel_isced)
     fig_province = data_utils.create_chart(province_grads, 'Province or Territory', 'graduates', 'Province/Territory', sel_prov)
-    fig_cma = data_utils.create_chart(cma_grads, 'CMA/CA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature)
+    # Pass the potentially reset DataFrame to the chart function
+    fig_cma = data_utils.create_chart(chart_cma_df, 'CMA/CA/CSD', 'graduates', 'Census Metropolitan Area', selected_feature) # selected_feature is DGUID
     fig_credential = data_utils.create_chart(credential_grads, 'Credential Type', 'graduates', 'Credential Type', sel_cred)
     fig_institution = data_utils.create_chart(institution_grads, 'Institution', 'graduates', 'Institution', sel_inst)
     fig_cip = data_utils.create_chart(cip_grads, 'CIP Name', 'graduates', 'CIP Name', sel_cip)
