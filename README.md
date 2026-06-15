@@ -1,3 +1,5 @@
+[https://stem-bhase-graduates-gafgcbaqa3dtbvcd.canadacentral-01.azurewebsites.net/](https://stem-bhase-graduates-gafgcbaqa3dtbvcd.canadacentral-01.azurewebsites.net/)
+
 # Comprehensive Analysis of the InfoZone STEM/BHASE Graduate Dashboard Architecture
 
 ## Core Architecture Overview
